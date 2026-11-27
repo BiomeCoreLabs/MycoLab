@@ -1030,8 +1030,10 @@
                 <div class="live-badge"><div class="rec-dot"></div> LIVE REC</div>
                 <div class="fps-badge">1080p • 60 FPS • LAN</div>
               </div>
+              <div id="chamber-light-overlay" style="position:absolute;inset:0;pointer-events:none;transition:all 0.4s ease;z-index:3;"></div>
+              <canvas id="chamber-fx-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
               <!-- AI Bounding Boxes -->
-              <div class="ai-boxes-overlay" id="ai-boxes">
+              <div class="ai-boxes-overlay" id="ai-boxes" style="z-index:6;">
                 <div class="ai-box" style="top:25%;left:28%;width:28%;height:32%;">
                   <span class="ai-box-label">🦁 Primordia Cluster #1 (98.4%)</span>
                 </div>
@@ -1605,14 +1607,112 @@ function toggleRelay(key, active) {
   AppState.relays[key].active = active;
   saveState();
 
-  const row = document.getElementById(`relay-row-${key}`);
-  const meta = document.getElementById(`relay-humidifier-meta`);
-
-  if (active) row.classList.add('active');
-  else row.classList.remove('active');
+  const row = document.getElementById('relay-row-' + key);
+  if (row) {
+    if (active) row.classList.add('active');
+    else row.classList.remove('active');
+  }
 
   updateTotalPower();
-  showToast(`${key.toUpperCase()} relay turned ${active ? 'ON' : 'OFF'}`);
+  updateChamberAtmosphere();
+  showToast(key.toUpperCase() + ' relay turned ' + (active ? 'ON' : 'OFF'));
+}
+
+// Chamber Visual FX (Interactive Mist, Fan Exhaust Swirl, Lighting Shift)
+let fxCanvas = null;
+let fxCtx = null;
+let mistParticles = [];
+let fanActive = false;
+let mistActive = true;
+
+function initChamberFX() {
+  fxCanvas = document.getElementById('chamber-fx-canvas');
+  if (!fxCanvas) return;
+  fxCtx = fxCanvas.getContext('2d');
+  
+  function resize() {
+    if (fxCanvas) {
+      fxCanvas.width = fxCanvas.offsetWidth || 640;
+      fxCanvas.height = fxCanvas.offsetHeight || 360;
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  
+  function renderAtmosphere() {
+    if (fxCtx && fxCanvas) {
+      fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+      
+      // Spawn ultrasonic mist clouds if humidifier active
+      if (mistActive && mistParticles.length < 80) {
+        mistParticles.push({
+          x: Math.random() * fxCanvas.width,
+          y: fxCanvas.height + 15,
+          vx: (Math.random() - 0.5) * 0.9,
+          vy: -(Math.random() * 1.4 + 0.6),
+          size: Math.random() * 50 + 35,
+          alpha: 0,
+          maxAlpha: Math.random() * 0.38 + 0.18
+        });
+      }
+      
+      // Update particles
+      for (let i = mistParticles.length - 1; i >= 0; i--) {
+        const p = mistParticles[i];
+        
+        // When fan is active, mist gets forcefully sucked toward the top-right exhaust!
+        if (fanActive) {
+          p.vy -= 0.22;
+          p.vx += 0.18;
+          p.alpha -= 0.02;
+        } else {
+          p.alpha = Math.min(p.alpha + 0.012, p.maxAlpha);
+        }
+        
+        p.x += p.vx;
+        p.y += p.vy;
+        p.size += 0.3;
+        
+        if (p.y < -p.size || p.x > fxCanvas.width + p.size || p.alpha <= 0) {
+          mistParticles.splice(i, 1);
+          continue;
+        }
+        
+        // Soft billowing radial fog cloud
+        const grad = fxCtx.createRadialGradient(p.x, p.y, p.size * 0.1, p.x, p.y, p.size);
+        grad.addColorStop(0, 'rgba(235, 250, 255, ' + (p.alpha * 0.75) + ')');
+        grad.addColorStop(0.5, 'rgba(215, 245, 255, ' + (p.alpha * 0.4) + ')');
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        fxCtx.fillStyle = grad;
+        fxCtx.beginPath();
+        fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        fxCtx.fill();
+      }
+    }
+    requestAnimationFrame(renderAtmosphere);
+  }
+  renderAtmosphere();
+  updateChamberAtmosphere();
+}
+
+function updateChamberAtmosphere() {
+  mistActive = AppState.relays.humidifier ? AppState.relays.humidifier.active : false;
+  fanActive = AppState.relays.fan ? AppState.relays.fan.active : false;
+  const lightActive = AppState.relays.light ? AppState.relays.light.active : true;
+  
+  const lightOverlay = document.getElementById('chamber-light-overlay');
+  const video = document.getElementById('chamber-video');
+  
+  if (lightOverlay) {
+    if (!lightActive) {
+      lightOverlay.style.background = 'rgba(2, 10, 6, 0.72)';
+      if (video) video.style.filter = 'brightness(0.6) contrast(1.2) hue-rotate(110deg) saturate(0.7)';
+    } else {
+      lightOverlay.style.background = 'rgba(255, 255, 255, 0.02)';
+      if (video) video.style.filter = 'brightness(1) contrast(1) hue-rotate(0deg) saturate(1)';
+    }
+  }
 }
 
 function updateTotalPower() {
@@ -2101,6 +2201,7 @@ window.addEventListener('DOMContentLoaded', () => {
   renderJars();
   updateTotalPower();
   calcBE();
+  initChamberFX();
 });
 </script>
 </body>
