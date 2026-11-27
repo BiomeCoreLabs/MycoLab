@@ -1,0 +1,48 @@
+# OS X
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Xcode
+build/
+DerivedData/
+*.moved-aside
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Artifacts & Temp
+*.xcarchive
+/tmp/
+
+# Apple Code Signing, Certificates & Private Keys (Never push to Git)
+*.cer
+*.cert
+*.p12
+*.p8
+*.key
+*.pem
+*.mobileprovision
+*.provisionprofile
+*.keychain
+*.keychain-db
+*.signing
+*Signing.local.xcconfig
+*Secrets.local.xcconfig
+
+# Secrets, Environment & Hardware configs
+*.env
+*.env.local
+*.local.json
+PiServer/devices.json
+PiServer/schedules.json
+PiServer/hub_log.json
+PiServer/database.json
+PiServer/timelapse/
+PiServer/backups/

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BiomeCore Labs ⌬ Independent Software Studio & Systems Lab</title>
+    <meta name="description" content="BiomeCore Labs is an independent software studio building native applications, IoT edge systems, and local-first digital architectures.">
+    <style>
+        :root {
+            --bg-void: #05070a;
+            --bg-primary: #090d14;
+            --bg-card: rgba(16, 24, 38, 0.75);
+            --bg-card-hover: rgba(22, 34, 54, 0.9);
+            --accent-green: #00FFAA;
+            --accent-cyan: #00E5FF;
+            --accent-purple: #9D4EDD;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b9bb4;
+            --text-muted: #53627a;
+            --border-glass: rgba(0, 255, 170, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --glow-green: 0 0 35px rgba(0, 255, 170, 0.25);
+            --glow-cyan: 0 0 35px rgba(0, 229, 255, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-void);
+            color: var(--text-primary);
+            line-height: 1.6;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 255, 170, 0.06) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 229, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(157, 78, 221, 0.04) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            background: rgba(5, 7, 10, 0.85);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        .brand-pill {
+            background: rgba(0, 255, 170, 0.12);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .brand-title {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        .nav-links a:hover {
+            color: var(--accent-green);
+        }
+
+        .container {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 80px 24px 120px 24px;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(0, 255, 170, 0.1);
+            color: var(--accent-green);
+            padding: 6px 18px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-glass);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        h1 {
+            font-size: clamp(38px, 6vw, 60px);
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            line-height: 1.15;
+            margin-bottom: 24px;
+            background: linear-gradient(135deg, #ffffff 40%, #00FFAA 80%, #00E5FF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p.subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            max-width: 780px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 80px;
+        }
+        .pillar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 32px;
+            transition: all 0.25s ease;
+        }
+        .pillar-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-glass);
+            background: var(--bg-card-hover);
+        }
+        .pillar-icon {
+            font-size: 28px;
+            margin-bottom: 16px;
+            display: inline-block;
+        }
+        .pillar-card h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        .pillar-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+        }
+
+        /* Portfolio Cards */
+        .project-card {
+            background: linear-gradient(135deg, rgba(16, 24, 38, 0.9), rgba(9, 13, 20, 0.95));
+            border: 1px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 40px;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 32px;
+            align-items: center;
+        }
+        @media (max-width: 768px) {
+            .project-card {
+                grid-template-columns: 1fr;
+                padding: 28px 20px;
+            }
+        }
+        .project-status {
+            display: inline-block;
+            background: rgba(0, 255, 170, 0.15);
+            color: var(--accent-green);
+            border: 1px solid var(--accent-green);
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .project-card h3 {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        .project-card p {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .btn-view {
+            display: inline-block;
+            background: var(--accent-green);
+            color: #000;
+            font-weight: 800;
+            padding: 12px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-view:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 255, 170, 0.4);
+        }
+
+        /* Future Pipeline */
+        .pipeline-card {
+            background: var(--bg-card);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 32px;
+            margin-bottom: 80px;
+        }
+        .pipeline-card h4 {
+            color: var(--accent-cyan);
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .pipeline-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .pipeline-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        footer {
+            border-top: 1px solid var(--border-subtle);
+            padding: 40px 0;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="biomecore.html" class="nav-brand">
+            <div class="brand-pill">BIOMECORE</div>
+            <div class="brand-title">BiomeCore <span>Labs</span></div>
+        </a>
+        <div class="nav-links">
+            <a href="index.html">MycoLabs App</a>
+            <a href="support.html">Support</a>
+            <a href="privacy_policy.html">Privacy</a>
+            <a href="https://github.com/BiomeCoreLabs" target="_blank">GitHub Org</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="hero">
+            <div class="badge">Independent Systems & Software Studio</div>
+            <h1>Engineered for Sovereignty & Native Performance.</h1>
+            <p class="subtitle">
+                BiomeCore Labs designs and builds precision applications, hardware-software bridges, and local-first computing systems across diverse domains.
+            </p>
+        </section>
+
+        <section class="pillars-grid">
+            <div class="pillar-card">
+                <div class="pillar-icon">🛡️</div>
+                <h3>100% Local-First</h3>
+                <p>We reject surveillance capitalism, unnecessary cloud dependencies, and forced telemetry. Your data lives on your device in your own custody.</p>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon">⚡</div>
+                <h3>Native Architecture</h3>
+                <p>Crafted exclusively in native code (Swift, SwiftUI, Metal, C/C++) for buttery 120fps fluid interaction, instant responsiveness, and zero cross-platform lag.</p>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon">🔌</div>
+                <h3>Hardware & Edge Synergy</h3>
+                <p>We bridge modern digital experiences with the physical world: local IoT sockets, WebRTC streaming, microcontrollers, and custom environmental sensors.</p>
+            </div>
+        </section>
+
+        <h2 class="section-title">Projects & Portfolio</h2>
+
+        <div class="project-card">
+            <div>
+                <span class="project-status">PRODUCTION RELEASE • v1.0.0</span>
+                <h3>MycoLabs ⌬ Smart Mycology OS</h3>
+                <p>
+                    A comprehensive laboratory management and automated climate system for gourmet & medicinal mushroom cultivation. Features dynamic VPD automation, 24/7 WebRTC cameras, Tuya IoT integration, hands-free cleanroom voice console, and genetic lineage mapping.
+                </p>
+                <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                    Target: iOS 17.6+ / iPadOS / macOS Catalyst • Swift 6 / SwiftUI • LiveKit WebRTC • Tuya LAN
+                </div>
+                <a href="index.html" class="btn-view">Explore MycoLabs App →</a>
+            </div>
+            <div style="text-align: center;">
+                <img src="assets/screenshots/01_dashboard_demo.png" alt="MycoLabs App Preview" style="max-width: 220px; border-radius: 14px; border: 1px solid var(--border-glass); box-shadow: var(--glow-green);">
+            </div>
+        </div>
+
+        <div class="pipeline-card">
+            <h4>Active R&D & Incubation</h4>
+            <h3>Future Labs & Next-Gen Software</h3>
+            <p>
+                BiomeCore Labs is continuously exploring new software frontiers beyond cultivation: from standalone native utilities and privacy-first personal databases to ambient computing HUDs and embedded sensor telemetry. Each project adheres to our non-negotiable core principles: local sovereignty, native craftsmanship, and zero tracking.
+            </p>
+        </div>
+
+        <footer>
+            &copy; 2026 BiomeCore Labs. All rights reserved. Crafting sovereign native software.<br>
+            Inquiries: <a href="mailto:biomecorelabs@icloud.com" style="color: var(--accent-green); text-decoration: none;">biomecorelabs@icloud.com</a>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+    "device_lamp_01": {
+        "name": "Lampen",
+        "id": "bf00000000000000000001",
+        "key": "TUYA_LOCAL_KEY_1",
+        "version": 3.3,
+        "ip": "192.168.1.101",
+        "type": "Light",
+        "aliases": ["kweeklamp", "kweeklampen", "lamp", "lampen", "licht", "growlight", "grow light", "grow_light"],
+        "is_on": false
+    },
+    "device_fan_01": {
+        "name": "Ventilatie",
+        "id": "bf00000000000000000002",
+        "key": "TUYA_LOCAL_KEY_2",
+        "version": 3.4,
+        "ip": "192.168.1.102",
+        "type": "ExhaustFan",
+        "aliases": ["ventilatie", "ventilator", "fan", "exhaust", "exhaustfan", "afzuiger", "afzuiging", "fae"],
+        "is_on": false
+    },
+    "device_humidifier_01": {
+        "name": "Humidifyer",
+        "id": "bf00000000000000000003",
+        "key": "TUYA_LOCAL_KEY_3",
+        "version": 3.3,
+        "ip": "192.168.1.103",
+        "type": "Humidifier",
+        "aliases": ["humidifyer", "humidifier", "bevochtiger", "luchtbevochtiger", "mist", "mister"],
+        "is_on": false
+    }
+}

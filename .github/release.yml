@@ -1,0 +1,20 @@
+changelog:
+  categories:
+    - title: "✨ Nieuwe Features & Innovaties"
+      labels:
+        - "feature"
+        - "enhancement"
+    - title: "🔬 Cleanroom AI & Automatisering"
+      labels:
+        - "cleanroom"
+        - "ai"
+        - "iot"
+    - title: "🐛 Bugfixes & Stabiliteit"
+      labels:
+        - "bug"
+        - "fix"
+    - title: "📱 UI & Multi-Platform Verbeteringen"
+      labels:
+        - "ui"
+        - "macos"
+        - "ipad"
