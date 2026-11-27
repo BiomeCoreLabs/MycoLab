@@ -912,10 +912,7 @@
         <span class="icon">🧮</span>
         <span>Tools & Presets</span>
       </a>
-      <a class="nav-item" onclick="switchTab('camera')">
-        <span class="icon">📹</span>
-        <span>Chamber 01 Feed</span>
-      </a>
+
 
       <div class="nav-label" style="margin-top:16px;">System & Voice</div>
       <a class="nav-item" onclick="openVoiceModal()">
@@ -1290,28 +1287,7 @@
       </section>
 
       <!-- ================= 5. CAMERA FULL VIEW TAB ================= -->
-      <section id="pane-camera" class="tab-pane">
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">
-              <span>📹</span>
-              <span>Chamber 01 • Fullscreen Optics & Telemetry HUD</span>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn-action" onclick="switchTab('dashboard')">← Back to Dashboard</button>
-              <button class="btn-action btn-primary" onclick="captureSnapshot()">📸 Shutter Snap</button>
-            </div>
-          </div>
-
-          <div class="camera-viewport" style="max-height:68vh;aspect-ratio:16/9;">
-            <video src="assets/animycolab.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
-            <div class="camera-overlay">
-              <div class="live-badge"><div class="rec-dot"></div> LIVE STREAMING 24/7</div>
-              <div class="fps-badge">H.264 • LOCAL LAN • LOW LATENCY</div>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       <!-- ================= 6. SETTINGS TAB ================= -->
       <section id="pane-settings" class="tab-pane">
@@ -1606,7 +1582,7 @@ function switchTab(tabId) {
     else if (tabId === 'genetics') crumb.innerText = 'GENETICS & ISOLATIONS';
     else if (tabId === 'stash') crumb.innerText = 'STASH & INVENTORY VAULT';
     else if (tabId === 'tools') crumb.innerText = 'TOOLS & CVG CALCULATORS';
-    else if (tabId === 'camera') crumb.innerText = 'CHAMBER 01 OPTICAL HUD';
+    
     else if (tabId === 'settings') crumb.innerText = 'SYSTEM CONFIG & LOCAL LAN';
   }
 }
@@ -1628,12 +1604,13 @@ function toggleRelay(key, active) {
   showToast(key.toUpperCase() + ' relay turned ' + (active ? 'ON' : 'OFF'));
 }
 
-// Chamber Visual FX (Interactive Mist, Fan Exhaust Swirl, Lighting Shift)
+// Chamber Visual FX (Persistent Lingering Mist & Gradual Fan Extraction)
 let fxCanvas = null;
 let fxCtx = null;
 let mistParticles = [];
 let fanActive = false;
 let mistActive = true;
+let mistDensity = 0.95; // 0.0 (crystal clear) to 1.0 (dense fog). Starts high.
 
 function initChamberFX() {
   fxCanvas = document.getElementById('chamber-fx-canvas');
@@ -1652,48 +1629,86 @@ function initChamberFX() {
   function renderAtmosphere() {
     if (fxCtx && fxCanvas) {
       fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
-      
-      // Spawn ultrasonic mist clouds if humidifier active
-      if (mistActive && mistParticles.length < 80) {
+
+      // --- MIST DYNAMICS ---
+      // Mist stays hanging in the tent! It only clears when the fan is turned on!
+      if (mistActive) {
+        // Humidifier is ON: builds up dense fog
+        mistDensity = Math.min(1.0, mistDensity + 0.012);
+      } else if (fanActive) {
+        // Ventilator is ON: exhausts and clears mist gradually over several seconds
+        mistDensity = Math.max(0.0, mistDensity - 0.005);
+      } else {
+        // Both Humidifier & Fan are OFF: MIST LINGERS in the closed tent!
+        // Very slow natural settling, stays visibly hanging
+        mistDensity = Math.max(0.70, mistDensity - 0.00015);
+      }
+
+      // Update image layer opacities dynamically
+      if (!envState.isHarvested) {
+        const lightActive = AppState.relays.light ? AppState.relays.light.active : true;
+        const imgBase = document.getElementById('chamber-img-base');
+        const imgMist = document.getElementById('chamber-img-mist');
+        const imgNight = document.getElementById('chamber-img-night');
+
+        if (imgMist && imgBase && imgNight) {
+          if (!lightActive) {
+            imgNight.style.opacity = '1';
+            imgMist.style.opacity = '0';
+            imgBase.style.opacity = '0';
+          } else {
+            imgNight.style.opacity = '0';
+            imgMist.style.opacity = mistDensity.toFixed(3);
+            imgBase.style.opacity = (1.0 - mistDensity * 0.85).toFixed(3);
+          }
+        }
+      }
+
+      // Spawn floating mist particles proportional to current mistDensity
+      const targetParticleCount = Math.round(mistDensity * 70);
+      if (mistActive && mistParticles.length < targetParticleCount) {
         mistParticles.push({
           x: Math.random() * fxCanvas.width,
           y: fxCanvas.height + 15,
-          vx: (Math.random() - 0.5) * 0.9,
-          vy: -(Math.random() * 1.4 + 0.6),
-          size: Math.random() * 50 + 35,
+          vx: (Math.random() - 0.5) * 0.7,
+          vy: -(Math.random() * 1.1 + 0.4),
+          size: Math.random() * 55 + 35,
           alpha: 0,
-          maxAlpha: Math.random() * 0.38 + 0.18
+          maxAlpha: Math.random() * 0.35 + 0.15
         });
       }
-      
-      // Update particles
+
+      // Update and draw lingering mist particles
       for (let i = mistParticles.length - 1; i >= 0; i--) {
         const p = mistParticles[i];
-        
-        // When fan is active, mist gets forcefully sucked toward the top-right exhaust!
+
         if (fanActive) {
-          p.vy -= 0.22;
-          p.vx += 0.18;
-          p.alpha -= 0.02;
+          // Fan ON: Mist accelerates upward into the exhaust vent!
+          p.vy -= 0.18;
+          p.vx += 0.14;
+          p.alpha -= 0.012;
         } else {
-          p.alpha = Math.min(p.alpha + 0.012, p.maxAlpha);
+          // Fan OFF: Gentle suspension, hovering in place like real stagnant fog
+          p.vx += (Math.random() - 0.5) * 0.06;
+          p.vy = p.vy * 0.98 - 0.02; // slow hovering drift
+          p.alpha = Math.min(p.alpha + 0.008, p.maxAlpha * mistDensity);
         }
-        
+
         p.x += p.vx;
         p.y += p.vy;
-        p.size += 0.3;
-        
+        p.size += 0.2;
+
         if (p.y < -p.size || p.x > fxCanvas.width + p.size || p.alpha <= 0) {
           mistParticles.splice(i, 1);
           continue;
         }
-        
-        // Soft billowing radial fog cloud
+
+        // Billowing fog puff
         const grad = fxCtx.createRadialGradient(p.x, p.y, p.size * 0.1, p.x, p.y, p.size);
         grad.addColorStop(0, 'rgba(235, 250, 255, ' + (p.alpha * 0.75) + ')');
         grad.addColorStop(0.5, 'rgba(215, 245, 255, ' + (p.alpha * 0.4) + ')');
         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        
+
         fxCtx.fillStyle = grad;
         fxCtx.beginPath();
         fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
@@ -1711,527 +1726,14 @@ function updateChamberAtmosphere() {
   fanActive = AppState.relays.fan ? AppState.relays.fan.active : false;
   const lightActive = AppState.relays.light ? AppState.relays.light.active : true;
 
-  const imgBase = document.getElementById('chamber-img-base');
-  const imgMist = document.getElementById('chamber-img-mist');
-  const imgNight = document.getElementById('chamber-img-night');
   const resTag = document.getElementById('camera-res-tag');
-
-  if (imgNight && imgMist && imgBase) {
-    if (!lightActive) {
-      // 1. Night Vision (IR Cam)
-      imgNight.style.opacity = '1';
-      imgMist.style.opacity = '0';
-      imgBase.style.opacity = '0';
-      if (resTag) resTag.innerText = 'IR NIGHT VISION • 60 FPS';
-    } else {
-      imgNight.style.opacity = '0';
-      if (resTag) resTag.innerText = '4K HDR • 60 FPS • LOCAL LAN';
-
-      if (fanActive) {
-        // 2. FAE Fan active: clears out mist rapidly!
-        imgMist.style.opacity = '0.05';
-        imgBase.style.opacity = '1';
-      } else if (mistActive) {
-        // 3. Humidifier active: dense ultrasonic mist!
-        imgMist.style.opacity = '1';
-        imgBase.style.opacity = '0';
-      } else {
-        // 4. Clean idle baseline
-        imgMist.style.opacity = '0';
-        imgBase.style.opacity = '1';
-      }
-    }
+  if (resTag) {
+    if (!lightActive) resTag.innerText = 'IR NIGHT VISION • 60 FPS';
+    else if (fanActive) resTag.innerText = '4K HDR • EXHAUST FAE ACTIVE';
+    else if (mistActive) resTag.innerText = '4K HDR • ULTRASONIC FOG ACTIVE';
+    else resTag.innerText = '4K HDR • 60 FPS • LOCAL LAN';
   }
 }
-
-function updateTotalPower() {
-  let total = 0;
-  for (const [k, v] of Object.entries(AppState.relays)) {
-    if (v.active) total += v.watts;
-  }
-  document.getElementById('total-power-tag').innerText = `${total}W TOTAL`;
-}
-
-// Camera Controls
-let currentLens = 1.0;
-function setLens(scale, btn) {
-  playBeep(900, 0.04);
-  currentLens = scale;
-  document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  const imgs = document.querySelectorAll('.camera-viewport img');
-  imgs.forEach(im => im.style.transform = 'scale(' + scale + ')');
-  showToast('Optical Zoom adjusted to ' + scale + 'x');
-}
-
-function toggleAIDetector() {
-  playBeep(640, 0.08);
-  const boxes = document.getElementById('ai-boxes');
-  const btn = document.getElementById('ai-detector-btn');
-  const active = boxes.classList.toggle('active');
-  if (active) {
-    btn.style.borderColor = 'var(--accent-green)';
-    btn.style.color = 'var(--accent-green)';
-    showToast('AI Pinhead Vision: 2 clusters localized (98.4% confidence)');
-  } else {
-    btn.style.borderColor = '';
-    btn.style.color = '';
-    showToast('AI Detection Overlay disabled');
-  }
-}
-
-function captureSnapshot() {
-  playBeep(1200, 0.15);
-  // Flash effect
-  const flash = document.createElement('div');
-  flash.style.position = 'fixed';
-  flash.style.inset = '0';
-  flash.style.background = '#fff';
-  flash.style.zIndex = '9999';
-  flash.style.opacity = '0.85';
-  flash.style.transition = 'opacity 0.25s ease';
-  document.body.appendChild(flash);
-  setTimeout(() => {
-    flash.style.opacity = '0';
-    setTimeout(() => flash.remove(), 250);
-  }, 50);
-
-  showToast('📸 Snapshot captured to Camera Roll / Chamber 01 Log');
-}
-
-// Batches Rendering
-function renderBatches() {
-  const container = document.getElementById('batches-container');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const badge = document.getElementById('nav-badge-batches');
-  if (badge) badge.innerText = AppState.batches.length;
-
-  AppState.batches.forEach(b => {
-    const radius = 24;
-    const circ = 2 * Math.PI * radius;
-    const offset = circ - (b.progress / 100) * circ;
-
-    const div = document.createElement('div');
-    div.className = 'batch-card';
-    div.onclick = (e) => {
-      if (e.target.tagName !== 'BUTTON') openBatchDetail(b.id);
-    };
-
-    div.innerHTML = `
-      <div class="batch-top">
-        <div>
-          <div class="batch-strain">${b.strain}</div>
-          <div class="batch-code">${b.code}</div>
-        </div>
-        <div class="batch-stage-badge">${b.stage}</div>
-      </div>
-      <div class="batch-progress-row">
-        <div class="progress-circle-wrap">
-          <svg viewBox="0 0 60 60">
-            <circle class="progress-circle-bg" cx="30" cy="30" r="${radius}"></circle>
-            <circle class="progress-circle-val" cx="30" cy="30" r="${radius}" style="stroke-dasharray: ${circ}; stroke-dashoffset: ${offset};"></circle>
-          </svg>
-          <div class="progress-text">${b.progress}%</div>
-        </div>
-        <div class="batch-details-list">
-          <div>Substrate: <strong>${b.substrate}</strong></div>
-          <div>Vessel: <strong>${b.vessel}</strong></div>
-          <div>Inoculation: <strong>Day ${b.days}</strong></div>
-        </div>
-      </div>
-      <div class="batch-actions-row">
-        <button class="batch-btn" onclick="openBatchDetail('${b.id}')">Inspect</button>
-        <button class="batch-btn harvest-btn" onclick="quickHarvest('${b.id}')">Harvest</button>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-// Batch Modals & Actions
-function openNewBatchModal() {
-  playBeep(700, 0.05);
-  document.getElementById('modal-new-batch').classList.add('active');
-}
-
-function handleNewBatchSubmit(e) {
-  e.preventDefault();
-  playBeep(920, 0.1);
-  const strain = document.getElementById('nb-strain').value;
-  const substrate = document.getElementById('nb-substrate').value;
-  const vessel = document.getElementById('nb-vessel').value;
-  const code = 'BATCH-' + Math.floor(100 + Math.random() * 900);
-
-  const newBatch = {
-    id: 'b-' + Date.now(),
-    strain: strain,
-    code: code,
-    stage: "Inoculated (Day 1)",
-    progress: 5,
-    substrate: substrate,
-    vessel: vessel,
-    days: 1
-  };
-
-  AppState.batches.unshift(newBatch);
-  saveState();
-  renderBatches();
-  closeModals();
-  showToast(`Inoculation Registered: ${strain}`);
-}
-
-function openBatchDetail(id) {
-  playBeep(700, 0.04);
-  AppState.activeBatchId = id;
-  const b = AppState.batches.find(x => x.id === id);
-  if (!b) return;
-
-  document.getElementById('md-strain-title').innerText = b.strain;
-  document.getElementById('md-batch-code').innerText = b.code;
-  document.getElementById('md-substrate').innerText = b.substrate;
-  document.getElementById('md-vessel').innerText = b.vessel;
-  document.getElementById('md-stage').innerText = b.stage;
-  document.getElementById('md-progress-label').innerText = b.progress + '%';
-  document.getElementById('md-progress-slider').value = b.progress;
-
-  document.getElementById('modal-batch-detail').classList.add('active');
-}
-
-function updateBatchProgress(val) {
-  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
-  if (!b) return;
-  b.progress = parseInt(val);
-  document.getElementById('md-progress-label').innerText = val + '%';
-  saveState();
-  renderBatches();
-}
-
-function advanceBatchStage() {
-  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
-  if (!b) return;
-  if (b.stage.includes('Inoculated')) b.stage = 'Colonizing Substrate';
-  else if (b.stage.includes('Colonizing')) b.stage = 'Primordia Forming';
-  else if (b.stage.includes('Primordia')) b.stage = 'Ready for Harvest';
-  else b.stage = 'Flush Complete';
-
-  document.getElementById('md-stage').innerText = b.stage;
-  saveState();
-  renderBatches();
-  showToast(`Advanced stage to: ${b.stage}`);
-}
-
-function harvestCurrentBatch() {
-  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
-  if (!b) return;
-  const dryYield = Math.floor(120 + Math.random() * 180);
-  AppState.jars.unshift({
-    id: 'j-' + Date.now(),
-    strain: b.strain.split('(')[0].trim() + ' Dried',
-    grams: dryYield,
-    moisture: 7.0,
-    flushes: 1,
-    date: new Date().toISOString().split('T')[0]
-  });
-
-  // Remove or complete batch
-  AppState.batches = AppState.batches.filter(x => x.id !== b.id);
-  saveState();
-  renderBatches();
-  renderJars();
-  closeModals();
-  showToast(`Harvested ${dryYield}g dried mushrooms into Vault!`);
-}
-
-function quickHarvest(id) {
-  AppState.activeBatchId = id;
-  harvestCurrentBatch();
-}
-
-function deleteCurrentBatch() {
-  AppState.batches = AppState.batches.filter(x => x.id !== AppState.activeBatchId);
-  saveState();
-  renderBatches();
-  closeModals();
-  showToast('Batch removed from cultivation station.');
-}
-
-// Genetics Tab
-function renderGenetics(filter = 'all') {
-  const container = document.getElementById('genetics-container');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const list = filter === 'all' ? AppState.genetics : AppState.genetics.filter(g => g.type === filter);
-
-  list.forEach(g => {
-    const card = document.createElement('div');
-    card.className = 'batch-card';
-    card.innerHTML = `
-      <div class="batch-top">
-        <div>
-          <div class="batch-strain">${g.strain}</div>
-          <div class="batch-code">${g.gen} • ${g.date}</div>
-        </div>
-        <div class="batch-stage-badge" style="text-transform:uppercase;">${g.type}</div>
-      </div>
-      <p style="font-size:13px;color:var(--text-muted);margin:12px 0;">${g.desc}</p>
-      <div class="batch-actions-row">
-        <button class="batch-btn" onclick="showToast('Isolate ${g.strain} queued for transfer')">Subculture</button>
-        <button class="batch-btn harvest-btn" onclick="printQRModal('${g.strain}')">Print Tag</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function filterGenetics(type, btn) {
-  playBeep(800, 0.04);
-  document.querySelectorAll('#pane-genetics .lens-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderGenetics(type);
-}
-
-function openNewCultureModal() {
-  const name = prompt("Enter Culture / Strain Name:", "Lion's Mane P3 Aggressive");
-  if (!name) return;
-  AppState.genetics.unshift({
-    id: 'g-' + Date.now(),
-    strain: name,
-    type: 'agar',
-    desc: 'New agar sector transfer on MEA. Sterile laminar flow hood protocol.',
-    gen: 'P3 Transfer',
-    date: new Date().toISOString().split('T')[0]
-  });
-  saveState();
-  renderGenetics();
-  showToast(`Logged culture transfer: ${name}`);
-}
-
-// Stash & Stock Jars
-function renderJars() {
-  const container = document.getElementById('jars-container');
-  if (!container) return;
-  container.innerHTML = '';
-
-  let totalG = 0;
-  AppState.jars.forEach(j => {
-    totalG += j.grams;
-    const card = document.createElement('div');
-    card.className = 'batch-card';
-    card.innerHTML = `
-      <div class="batch-top">
-        <div>
-          <div class="batch-strain">${j.strain}</div>
-          <div class="batch-code">CURING JAR #${j.id.toUpperCase()}</div>
-        </div>
-        <div class="batch-stage-badge">${j.grams}g DRY</div>
-      </div>
-      <div style="font-size:13px;color:var(--text-muted);margin:8px 0;">
-        Moisture: <strong>${j.moisture}%</strong> • Flushes Recorded: <strong>${j.flushes}</strong><br>
-        Pack Date: <strong>${j.date}</strong>
-      </div>
-      <div class="batch-actions-row">
-        <button class="batch-btn" onclick="adjustJar('${j.id}', -10)">-10g Use</button>
-        <button class="batch-btn" onclick="adjustJar('${j.id}', 50)">+50g Flush</button>
-        <button class="batch-btn harvest-btn" onclick="printQRModal('${j.strain}')">QR Tag</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-
-  document.getElementById('vault-total-g').innerText = totalG.toLocaleString();
-  const stashBadge = document.getElementById('nav-badge-stash');
-  if (stashBadge) stashBadge.innerText = (totalG / 1000).toFixed(2) + 'kg';
-}
-
-function adjustJar(id, delta) {
-  playBeep(delta > 0 ? 800 : 400, 0.05);
-  const j = AppState.jars.find(x => x.id === id);
-  if (!j) return;
-  j.grams = Math.max(0, j.grams + delta);
-  saveState();
-  renderJars();
-  showToast(`Jar ${j.strain} updated: ${j.grams}g`);
-}
-
-function openNewHarvestModal() {
-  const grams = prompt("Enter Fresh Wet Harvest Weight (grams):", "1200");
-  if (!grams) return;
-  const dryGrams = Math.round(parseInt(grams) * 0.09);
-  AppState.jars.unshift({
-    id: 'j-' + Date.now(),
-    strain: "Fresh Harvest Dried",
-    grams: dryGrams,
-    moisture: 7.0,
-    flushes: 1,
-    date: new Date().toISOString().split('T')[0]
-  });
-  saveState();
-  renderJars();
-  showToast(`Logged harvest: ${grams}g wet -> ${dryGrams}g dried in vault!`);
-}
-
-// Calculators
-function calculateCVG(coir) {
-  document.getElementById('coir-weight-display').innerText = `${coir}g (${(coir / 650).toFixed(1)} standard bricks)`;
-  const ratio = coir / 650;
-  const verm = Math.round(240 * ratio);
-  const gypsum = Math.round(75 * ratio);
-  const water = (3.25 * ratio).toFixed(2);
-
-  document.getElementById('cvg-verm').innerText = `${verm} g (~${Math.round(8 * ratio)} cups)`;
-  document.getElementById('cvg-gypsum').innerText = `${gypsum} g (~${(0.5 * ratio).toFixed(1)} cups)`;
-  document.getElementById('cvg-water').innerText = `${water} Liters`;
-}
-
-function calcBE() {
-  const sub = parseFloat(document.getElementById('be-sub-input').value) || 1;
-  const yld = parseFloat(document.getElementById('be-yield-input').value) || 0;
-  const be = ((yld / sub) * 100).toFixed(1);
-
-  document.getElementById('be-result').innerText = be + '%';
-  const rating = document.getElementById('be-rating');
-  if (be > 100) rating.innerText = '★ Commercial Elite Standard';
-  else if (be > 75) rating.innerText = '★ High Yield Harvest';
-  else rating.innerText = '● Standard Biological Efficiency';
-}
-
-// Timer
-let timerInterval = null;
-let timerSeconds = 90 * 60;
-function toggleTimer() {
-  playBeep(880, 0.08);
-  const btn = document.getElementById('timer-toggle-btn');
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    btn.innerText = 'Resume Timer';
-    showToast('Sterilization timer paused');
-  } else {
-    timerInterval = setInterval(() => {
-      timerSeconds--;
-      if (timerSeconds <= 0) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-        playBeep(1200, 0.5);
-        showToast('⏰ 15 PSI Sterilization Cycle Completed!');
-      }
-      updateTimerDisplay();
-    }, 1000);
-    btn.innerText = 'Pause Timer';
-    showToast('Sterilization countdown active');
-  }
-}
-
-function resetTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-  timerSeconds = 90 * 60;
-  document.getElementById('timer-toggle-btn').innerText = 'Start Timer';
-  updateTimerDisplay();
-}
-
-function updateTimerDisplay() {
-  const mins = Math.floor(timerSeconds / 60);
-  const secs = timerSeconds % 60;
-  document.getElementById('timer-display').innerText = 
-    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-// Cleanroom Voice Assistant
-function openVoiceModal() {
-  playBeep(880, 0.06);
-  document.getElementById('modal-voice').classList.add('active');
-}
-
-function executeVoiceIntent(intent) {
-  playBeep(1000, 0.08);
-  const bubble = document.getElementById('voice-response-bubble');
-  let responseText = "";
-
-  if (intent === 'status') {
-    responseText = "Chamber 01 status nominal: Temperature 21.5°C, Humidity 90.2%, VPD 0.38 kPa, CO2 740 PPM.";
-  } else if (intent === 'humidifier') {
-    toggleRelay('humidifier', true);
-    document.getElementById('switch-humidifier').checked = true;
-    responseText = "Humidifier ultrasonic cycle engaged. Maintaining 90% relative humidity target.";
-  } else if (intent === 'vpd') {
-    responseText = "Current Vapor Pressure Deficit is 0.38 kilopascals. Optimum range for active primordia pinheads.";
-  } else if (intent === 'harvest') {
-    const total = AppState.jars.reduce((acc, x) => acc + x.grams, 0);
-    responseText = `Total vault inventory stands at ${total} grams dried mushrooms across ${AppState.jars.length} sealed jars.`;
-  }
-
-  bubble.innerHTML = `<strong>Assistant:</strong> "${responseText}"`;
-
-  // Speech synthesis
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(responseText);
-    utter.rate = 1.05;
-    utter.pitch = 1.0;
-    window.speechSynthesis.speak(utter);
-  }
-}
-
-// Scanner Simulator
-function openScannerModal() {
-  playBeep(700, 0.05);
-  document.getElementById('modal-scanner').classList.add('active');
-}
-
-function simulateQRScan(batchId) {
-  playBeep(1200, 0.12);
-  closeModals();
-  showToast(`QR Recognized: [BATCH-${batchId}] Lion's Mane`);
-  switchTab('dashboard');
-  setTimeout(() => openBatchDetail(batchId), 300);
-}
-
-function printQRModal(text) {
-  playBeep(700, 0.05);
-  document.getElementById('qr-code-text').innerText = text;
-  document.getElementById('modal-qr-print').classList.add('active');
-}
-
-function closeModals() {
-  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
-}
-
-// Settings
-function testHubConnection() {
-  playBeep(880, 0.05);
-  showToast('Tuya Local Gateway: 0.42ms ping verified • LAN OK');
-}
-
-function triggerDecoyTest() {
-  playBeep(440, 0.1);
-  showToast('🔒 Decoy Mode simulated: Hiding proprietary vaults');
-}
-
-function resetDemoState() {
-  if (confirm("Reset all interactive data back to factory demo defaults?")) {
-    AppState = defaultState;
-    saveState();
-    renderBatches();
-    renderGenetics();
-    renderJars();
-    updateTotalPower();
-    showToast('Factory demo data restored');
-  }
-}
-
-// Init
-window.addEventListener('DOMContentLoaded', () => {
-  renderBatches();
-  renderGenetics();
-  renderJars();
-  updateTotalPower();
-  calcBE();
-  initChamberFX();
-});
 
 // --- Environmental Physics Engine (Arden Buck Dynamic Psychrometrics) ---
 let envState = {
