@@ -1028,10 +1028,16 @@
               <img id="chamber-img-base" src="assets/chamber_base.jpg" alt="Chamber Base" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;z-index:1;">
               <img id="chamber-img-mist" src="assets/chamber_mist.jpg" alt="Chamber Mist" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:1;z-index:2;">
               <img id="chamber-img-night" src="assets/chamber_night.jpg" alt="Chamber Night Vision" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:0;z-index:3;">
+              <img id="chamber-img-harvest" src="assets/chamber_harvested.jpg" alt="Chamber Harvested" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:0;z-index:2;">
               <canvas id="chamber-fx-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
               <div class="camera-overlay" style="z-index:5;">
                 <div class="live-badge"><div class="rec-dot"></div> LIVE OPTICAL FEED</div>
                 <div class="fps-badge" id="camera-res-tag">4K HDR • 60 FPS • LOCAL LAN</div>
+              </div>
+              <!-- Resting / Dunk Flush 2 Bar -->
+              <div id="chamber-harvest-bar" style="display:none;position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(10,16,26,0.92);border:1px solid var(--accent-green);padding:7px 16px;border-radius:24px;z-index:7;font-size:12px;align-items:center;gap:12px;box-shadow:0 8px 28px rgba(0,0,0,0.7);backdrop-filter:blur(8px);">
+                <span style="color:#fff;font-weight:700;display:flex;align-items:center;gap:6px;"><span>✂️</span> FLUSH 1 HARVESTED • RESTING BLOCKS</span>
+                <button onclick="dunkAndRegrow()" style="background:var(--accent-green);color:#000;border:none;padding:5px 12px;border-radius:12px;font-size:11px;font-weight:800;cursor:pointer;transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💧 Dunk Substrate & Regrow Flush 2</button>
               </div>
               <!-- AI Bounding Boxes -->
               <div class="ai-boxes-overlay" id="ai-boxes" style="z-index:6;">
@@ -1318,7 +1324,10 @@
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(0,0,0,0.3);border-radius:var(--radius-md);margin-bottom:12px;">
               <span>Gateway IP:</span> <strong style="font-family:monospace;color:var(--accent-green);">192.168.1.185</strong>
             </div>
-            <button class="btn-action" onclick="testHubConnection()" style="width:100%;justify-content:center;">Test Ping Gateway</button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-action" onclick="testHubConnection()" style="flex:1;justify-content:center;">Test Ping</button>
+              <button class="btn-action" onclick="scanLocalLANSubnet()" style="flex:1.2;justify-content:center;">🔍 Scan LAN Subnet</button>
+            </div>
           </div>
 
           <div class="card">
@@ -2223,6 +2232,249 @@ window.addEventListener('DOMContentLoaded', () => {
   calcBE();
   initChamberFX();
 });
+
+// --- Environmental Physics Engine (Arden Buck Dynamic Psychrometrics) ---
+let envState = {
+  temp: 21.5,
+  rh: 90.2,
+  co2: 740,
+  isHarvested: false
+};
+
+function calculateArdenBuckVPD(tempC, rhPct) {
+  // Saturation vapor pressure in kPa
+  const es = 0.61121 * Math.exp((18.678 - (tempC / 234.5)) * (tempC / (257.14 + tempC)));
+  // Actual vapor pressure in kPa
+  const ea = es * (rhPct / 100);
+  return Math.max(0, es - ea);
+}
+
+function updateEnvironmentalPhysics() {
+  const humOn = AppState.relays.humidifier ? AppState.relays.humidifier.active : false;
+  const fanOn = AppState.relays.fan ? AppState.relays.fan.active : false;
+  const heatOn = AppState.relays.heater ? AppState.relays.heater.active : false;
+
+  // Target equilibrium calculations
+  let targetRH = 84.0;
+  if (humOn) targetRH = 93.8;
+  if (fanOn) targetRH -= 5.5; // Fresh air removes humidity
+
+  let targetCO2 = 760;
+  if (fanOn) targetCO2 = 425; // Atmospheric fresh air exchange
+  else if (humOn) targetCO2 = 810; // Sealed humid chamber
+
+  let targetTemp = 21.2;
+  if (heatOn) targetTemp = 24.4;
+
+  // Smooth realistic sensor drift with slight micro-noise
+  envState.rh += (targetRH - envState.rh) * 0.25 + (Math.random() - 0.5) * 0.08;
+  envState.co2 += (targetCO2 - envState.co2) * 0.25 + (Math.random() - 0.5) * 4;
+  envState.temp += (targetTemp - envState.temp) * 0.25 + (Math.random() - 0.5) * 0.04;
+
+  const vpd = calculateArdenBuckVPD(envState.temp, envState.rh);
+
+  // Update Top Bar Strip
+  const topTemp = document.getElementById('top-temp');
+  if (topTemp) topTemp.innerText = envState.temp.toFixed(1) + '°C';
+
+  const topRH = document.getElementById('top-rh');
+  if (topRH) topRH.innerText = envState.rh.toFixed(1) + '%';
+
+  const topCO2 = document.getElementById('top-co2');
+  if (topCO2) topCO2.innerText = Math.round(envState.co2) + ' PPM';
+
+  const topVPD = document.getElementById('top-vpd');
+  if (topVPD) topVPD.innerText = vpd.toFixed(2);
+
+  // Update Telemetry Cards
+  const mVPD = document.getElementById('metric-vpd');
+  if (mVPD) {
+    mVPD.innerText = vpd.toFixed(2);
+    const sub = mVPD.parentElement.nextElementSibling;
+    if (sub) {
+      if (vpd < 0.28) {
+        sub.innerText = '● Primordia Formation (Low Deficit)';
+        sub.style.color = 'var(--accent-cyan)';
+      } else if (vpd <= 0.55) {
+        sub.innerText = '● Optimal Transpiration & Pin Growth';
+        sub.style.color = 'var(--accent-green)';
+      } else {
+        sub.innerText = '⚠️ Moisture Stress (Desiccation Risk)';
+        sub.style.color = 'var(--accent-amber)';
+      }
+    }
+  }
+
+  const mTemp = document.getElementById('metric-temp');
+  if (mTemp) mTemp.innerText = envState.temp.toFixed(1);
+
+  const mRH = document.getElementById('metric-rh');
+  if (mRH) mRH.innerText = envState.rh.toFixed(1);
+
+  const mCO2 = document.getElementById('metric-co2');
+  if (mCO2) {
+    mCO2.innerText = Math.round(envState.co2);
+    const sub = mCO2.parentElement.nextElementSibling;
+    if (sub) {
+      if (fanOn) {
+        sub.innerText = '● Active FAE Cycle (Exhaust On)';
+        sub.style.color = 'var(--accent-green)';
+      } else {
+        sub.innerText = '● Target: < 800 PPM (Resting)';
+        sub.style.color = 'var(--text-muted)';
+      }
+    }
+  }
+}
+
+// Continuous physics loop every 900ms
+setInterval(updateEnvironmentalPhysics, 900);
+
+// --- Time-Lapse Growth Scrubber ---
+function scrubGrowth(day) {
+  playBeep(600 + day * 30, 0.03);
+  const label = document.getElementById('growth-scrubber-label');
+  const d = parseInt(day);
+
+  if (d <= 3) {
+    label.innerText = `Day ${d} • Mycelial Knotting`;
+    setChamberVisualMode('harvested'); // Shows early blocks / cut resting stage
+  } else if (d <= 7) {
+    label.innerText = `Day ${d} • Active Pinheads`;
+    setChamberVisualMode('harvested');
+  } else if (d <= 11) {
+    label.innerText = `Day ${d} • Rapid Fruiting`;
+    setChamberVisualMode('base');
+  } else {
+    label.innerText = `Day ${d} • Mature Flush`;
+    setChamberVisualMode('base');
+  }
+}
+
+function setChamberVisualMode(mode) {
+  const imgBase = document.getElementById('chamber-img-base');
+  const imgMist = document.getElementById('chamber-img-mist');
+  const imgNight = document.getElementById('chamber-img-night');
+  const imgHarvest = document.getElementById('chamber-img-harvest');
+  const harvestBar = document.getElementById('chamber-harvest-bar');
+
+  if (!imgBase || !imgHarvest) return;
+
+  if (mode === 'harvested') {
+    imgHarvest.style.opacity = '1';
+    imgBase.style.opacity = '0';
+    if (imgMist) imgMist.style.opacity = '0';
+    if (harvestBar) harvestBar.style.display = 'flex';
+  } else {
+    imgHarvest.style.opacity = '0';
+    imgBase.style.opacity = '1';
+    if (harvestBar) harvestBar.style.display = 'none';
+  }
+}
+
+function dunkAndRegrow() {
+  playBeep(880, 0.1);
+  showToast('💧 Substrate dunked & rehydrated! Primordia initializing for Flush 2...');
+  
+  // Cross-fade back to thriving mushrooms
+  envState.isHarvested = false;
+  setChamberVisualMode('base');
+  
+  // Re-add a batch to the list
+  AppState.batches.unshift({
+    id: 'LM-Flush2',
+    strain: "Lion's Mane (Flush 2)",
+    code: "BATCH-LM-F2",
+    stage: "Primordia Forming",
+    progress: 35,
+    substrate: "Rehydrated Hardwood",
+    vessel: "5lb Filter Patch Bag",
+    days: 1
+  });
+  saveState();
+  renderBatches();
+}
+
+// Override harvestCurrentBatch to trigger camera transition & celebration modal
+function harvestCurrentBatch() {
+  const b = AppState.batches.find(x => x.id === AppState.activeBatchId) || AppState.batches[0];
+  if (!b) return;
+
+  playBeep(1200, 0.2);
+  const freshG = Math.floor(620 + Math.random() * 240);
+  const dryG = Math.round(freshG * 0.10);
+
+  // Cross-fade camera to harvested cut stems view!
+  envState.isHarvested = true;
+  setChamberVisualMode('harvested');
+
+  // Add to vault jars
+  AppState.jars.unshift({
+    id: 'j-' + Date.now(),
+    strain: b.strain.split('(')[0].trim() + ' Dried (Flush 1)',
+    grams: dryG,
+    moisture: 7.0,
+    flushes: 1,
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  // Remove batch with smooth UI transition
+  AppState.batches = AppState.batches.filter(x => x.id !== b.id);
+  saveState();
+  renderBatches();
+  renderJars();
+  closeModals();
+
+  // Show celebration modal
+  document.getElementById('harvest-modal-title').innerText = `${b.strain.split('(')[0]} Harvested!`;
+  document.getElementById('harvest-fresh-wt').innerText = `${freshG}g`;
+  document.getElementById('harvest-dry-wt').innerText = `${dryG}g`;
+  document.getElementById('harvest-vault-dest').innerText = `Jar #${b.code} • Stash & Vault Updated`;
+  document.getElementById('modal-harvest-celebrate').classList.add('active');
+
+  showToast(`🎉 Harvested ${freshG}g fresh (${dryG}g dry) — resting blocks visible on optical camera!`);
+}
+
+// Interactive LAN Subnet Discovery
+function scanLocalLANSubnet() {
+  playBeep(700, 0.05);
+  showToast('🔍 Scanning subnet 192.168.1.0/24 for Tuya Local & ESP32 nodes...');
+  setTimeout(() => {
+    playBeep(920, 0.1);
+    alert("LAN Discovery Complete (3 devices found):\n\n1. [192.168.1.42] Chamber-01 4-Way Smart Relay (Tuya 3.4 Local Protocol • Ping: 0.38ms)\n2. [192.168.1.45] Optical HUD Camera ESP32-CAM (60 FPS RTSP Gateway • Ping: 0.42ms)\n3. [192.168.1.60] Precision VPD Psychrometric Sensor (I2C SHT45 • Ping: 0.29ms)");
+  }, 1200);
+}
+
 </script>
+
+  <!-- Modal: Harvest Celebration -->
+  <div class="modal-overlay" id="modal-harvest-celebrate">
+    <div class="modal-card" style="max-width:440px;text-align:center;">
+      <div style="font-size:44px;margin-bottom:8px;">🍄 🎉</div>
+      <h3 style="font-size:22px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;" id="harvest-modal-title">Harvest Complete!</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;" id="harvest-modal-sub">Prime fruiting flush harvested from Chamber 01</p>
+
+      <div style="background:rgba(0,0,0,0.35);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:left;">
+        <div>
+          <span style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:700;">Fresh Yield</span>
+          <div style="font-size:20px;font-weight:900;color:var(--accent-green);" id="harvest-fresh-wt">740g</div>
+        </div>
+        <div>
+          <span style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:700;">Dry Target (10%)</span>
+          <div style="font-size:20px;font-weight:900;color:var(--accent-cyan);" id="harvest-dry-wt">74g</div>
+        </div>
+        <div style="grid-column:span 2;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);">
+          <span style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:700;">Vault Destination</span>
+          <div style="font-size:13px;font-weight:700;color:#fff;" id="harvest-vault-dest">Glass Curing Jar • Batch Logged</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn-action" style="flex:1;" onclick="closeModals()">Done</button>
+        <button class="btn-primary" style="flex:1;" onclick="closeModals();switchTab('stash')">Open Vault →</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
