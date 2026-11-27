@@ -141,23 +141,47 @@ struct LivingLabBioHeroCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let chamberType = store.db.environmentConfig.growChamberType == "monotub" ? "growTent" : store.db.environmentConfig.growChamberType
+        let vpdAnalysis = MycoVPDCalculator.analyze(tempC: currentTemp, humidityPct: currentHumidity, environment: chamberType)
+        
+        VStack(alignment: .leading, spacing: 10) {
             // Header Row: Compact Title & Action
             HStack(alignment: .center) {
-                HStack(spacing: 7) {
+                HStack(spacing: 8) {
                     ZStack {
                         Circle()
                             .fill(hasActiveSensor ? MycoTheme.green.opacity(0.18) : (isManualReading ? MycoTheme.blue.opacity(0.18) : Color.white.opacity(0.08)))
-                            .frame(width: 28, height: 28)
+                            .frame(width: 30, height: 30)
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : Color.white.opacity(0.2)))
+                                            .opacity(isBreathing ? 0.6 : 0.2),
+                                        lineWidth: 1
+                                    )
+                                    .scaleEffect(isBreathing ? 1.15 : 0.95)
+                            )
                         Image(systemName: hasActiveSensor ? "sensor.fill" : (isManualReading ? "pencil.circle.fill" : "thermometer.medium"))
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : MycoTheme.textSecondary))
                     }
                     
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(store.t(nl: "Kweektent Klimaat", en: "Grow Tent Climate"))
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                        HStack(spacing: 6) {
+                            Text(store.t(nl: "Kweektent Klimaat & VPD", en: "Grow Tent Climate & VPD"))
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            
+                            // BiomeCore mini-tag
+                            Text("BIOMECORE")
+                                .font(.system(size: 8, weight: .black, design: .monospaced))
+                                .tracking(0.8)
+                                .foregroundColor(Color.cyan.opacity(0.85))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.cyan.opacity(0.12))
+                                .cornerRadius(3)
+                        }
                         
                         HStack(spacing: 5) {
                             Circle()
@@ -178,11 +202,13 @@ struct LivingLabBioHeroCard: View {
                 
                 // Unified Meting knop
                 Button {
+                    let gen = UIImpactFeedbackGenerator(style: .medium)
+                    gen.impactOccurred()
                     onLogManualClimate()
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                         Text(store.t(nl: "Meting", en: "Log"))
                             .font(.system(size: 11, weight: .bold))
                     }
@@ -196,12 +222,12 @@ struct LivingLabBioHeroCard: View {
                 .buttonStyle(ModernBouncyButtonStyle())
             }
             
-            // Primary Metrics Row (Compact side-by-side)
+            // Primary Metrics Grid (Temp, Humidity, VPD)
             HStack(spacing: 8) {
                 // Temperature Tile
                 HStack(spacing: 8) {
                     Image(systemName: "thermometer.medium")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(currentTemp != nil ? MycoTheme.amber : MycoTheme.textSecondary.opacity(0.5))
                     
                     VStack(alignment: .leading, spacing: 1) {
@@ -211,19 +237,19 @@ struct LivingLabBioHeroCard: View {
                         
                         if let t = currentTemp {
                             Text(String(format: "%.1f°C", t))
-                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundColor(.white)
                                 .contentTransition(.numericText())
                                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: t)
                         } else {
                             Text("--.-°C")
-                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundColor(MycoTheme.textSecondary.opacity(0.5))
                         }
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 9)
                 .padding(.vertical, 7)
                 .background(Color.white.opacity(0.04))
                 .cornerRadius(8)
@@ -231,7 +257,7 @@ struct LivingLabBioHeroCard: View {
                 // Humidity Tile
                 HStack(spacing: 8) {
                     Image(systemName: "humidity.fill")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(currentHumidity != nil ? MycoTheme.blue : MycoTheme.textSecondary.opacity(0.5))
                     
                     VStack(alignment: .leading, spacing: 1) {
@@ -241,61 +267,119 @@ struct LivingLabBioHeroCard: View {
                         
                         if let h = currentHumidity {
                             Text(String(format: "%.0f%% RV", h))
-                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundColor(.white)
                                 .contentTransition(.numericText())
                                 .animation(.spring(response: 0.35, dampingFraction: 0.8), value: h)
                         } else {
                             Text("--% RV")
-                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
                                 .foregroundColor(MycoTheme.textSecondary.opacity(0.5))
                         }
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 9)
                 .padding(.vertical, 7)
                 .background(Color.white.opacity(0.04))
                 .cornerRadius(8)
+                
+                // VPD Tile
+                HStack(spacing: 8) {
+                    Image(systemName: vpdAnalysis?.icon ?? "gauge.with.needle")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(vpdAnalysis?.color ?? MycoTheme.textSecondary.opacity(0.5))
+                    
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("VPD Deficit")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(MycoTheme.textSecondary)
+                        
+                        if let vpd = vpdAnalysis {
+                            Text(String(format: "%.2f kPa", vpd.vpdKPa))
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .foregroundColor(vpd.color)
+                                .contentTransition(.numericText())
+                        } else {
+                            Text("-- kPa")
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                .foregroundColor(MycoTheme.textSecondary.opacity(0.5))
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 9)
+                .padding(.vertical, 7)
+                .background(
+                    (vpdAnalysis?.color.opacity(0.08) ?? Color.white.opacity(0.04))
+                )
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(vpdAnalysis?.color.opacity(0.2) ?? Color.clear, lineWidth: 1)
+                )
             }
             
             // Psychrometric VPD & Dew Point Analysis
-            let chamberType = store.db.environmentConfig.growChamberType == "monotub" ? "growTent" : store.db.environmentConfig.growChamberType
-            if let vpdAnalysis = MycoVPDCalculator.analyze(tempC: currentTemp, humidityPct: currentHumidity, environment: chamberType) {
-                HStack(spacing: 6) {
-                    HStack(spacing: 4) {
-                        Image(systemName: vpdAnalysis.icon)
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(vpdAnalysis.color)
-                        Text(String(format: "VPD %.2f kPa", vpdAnalysis.vpdKPa))
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white)
-                        Text("•")
-                            .foregroundColor(MycoTheme.textSecondary)
-                        Text(store.isEnglish ? vpdAnalysis.titleEN : vpdAnalysis.titleNL)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(vpdAnalysis.color)
+            if let vpd = vpdAnalysis {
+                VStack(spacing: 5) {
+                    HStack(spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: vpd.icon)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(vpd.color)
+                            Text(store.isEnglish ? vpd.titleEN : vpd.titleNL)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundColor(vpd.color)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(vpd.color.opacity(0.12))
+                        .cornerRadius(5)
+                        
+                        Spacer()
+                        
+                        HStack(spacing: 3) {
+                            Image(systemName: "thermometer.snowflake")
+                                .font(.system(size: 9))
+                                .foregroundColor(Color.cyan)
+                            Text(String(format: "Dauwpunt %.1f°C", vpd.dewPointC))
+                                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                .foregroundColor(MycoTheme.textSecondary)
+                        }
+                        
+                        InfoTipButton(
+                            title: store.t(nl: "VPD & Dauwpunt Kennis", en: "VPD & Dew Point Science"),
+                            message: store.isEnglish ? vpd.detailedAdviceEN : vpd.detailedAdviceNL
+                        )
                     }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(vpdAnalysis.color.opacity(0.12))
-                    .cornerRadius(5)
                     
-                    Spacer()
-                    
-                    HStack(spacing: 3) {
-                        Image(systemName: "thermometer.snowflake")
-                            .font(.system(size: 9))
-                            .foregroundColor(Color.cyan)
-                        Text(String(format: "Dauwpunt %.1f°C", vpdAnalysis.dewPointC))
-                            .font(.system(size: 9, weight: .medium, design: .monospaced))
-                            .foregroundColor(MycoTheme.textSecondary)
+                    // Visual VPD Range Bar Indicator
+                    GeometryReader { geo in
+                        let clampedVPD = min(max(vpd.vpdKPa, 0.0), 1.2)
+                        let ratio = CGFloat(clampedVPD / 1.2)
+                        ZStack(alignment: .leading) {
+                            // Gradient track: 0.0-0.35 ideal (green), 0.35-0.6 incubation (cyan), >0.6 dry (red)
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.green.opacity(0.7), Color.cyan.opacity(0.7), Color.orange.opacity(0.7), Color.red.opacity(0.7)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(height: 4)
+                            
+                            // Pointer
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 8, height: 8)
+                                .shadow(color: Color.black.opacity(0.4), radius: 2)
+                                .offset(x: max(0, min(geo.size.width - 8, geo.size.width * ratio - 4)))
+                        }
                     }
-                    
-                    InfoTipButton(
-                        title: store.t(nl: "VPD & Dauwpunt Kennis", en: "VPD & Dew Point Science"),
-                        message: store.isEnglish ? vpdAnalysis.detailedAdviceEN : vpdAnalysis.detailedAdviceNL
-                    )
+                    .frame(height: 8)
+                    .padding(.top, 2)
                 }
             }
             
@@ -342,13 +426,13 @@ struct LivingLabBioHeroCard: View {
                 }
             }
         }
-        .padding(10)
+        .padding(12)
         .background(
             ZStack {
                 MycoTheme.card
                 LinearGradient(
                     colors: [
-                        (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : Color.white.opacity(0.1))).opacity(isBreathing ? 0.08 : 0.03),
+                        (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : Color.cyan)).opacity(isBreathing ? 0.08 : 0.03),
                         Color.clear
                     ],
                     startPoint: .topLeading,
@@ -356,12 +440,18 @@ struct LivingLabBioHeroCard: View {
                 )
             }
         )
-        .cornerRadius(12)
+        .cornerRadius(14)
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 14)
                 .stroke(
-                    (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : MycoTheme.border))
-                        .opacity(isBreathing ? 0.35 : 0.18),
+                    LinearGradient(
+                        colors: [
+                            (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : Color.cyan)).opacity(isBreathing ? 0.45 : 0.2),
+                            Color.white.opacity(0.04)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
                     lineWidth: 1
                 )
         )
@@ -1044,132 +1134,177 @@ struct ModernGrowProjectCard: View {
     }
     
     var body: some View {
-        HStack(spacing: 14) {
-            // Living Colonization Ring
-            LivingColonizationRing(
-                progress: project.normalizedColonizationPercent,
-                phase: project.phase,
-                daysActive: daysActive
-            )
-            
-            // Middle: Information Hierarchy
-            VStack(alignment: .leading, spacing: 5) {
-                // Strain title & Batch Number
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(store.displayTitle(name: project.strainName, sku: project.skuCode))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+        VStack(spacing: 8) {
+            HStack(spacing: 14) {
+                // Living Colonization Ring
+                LivingColonizationRing(
+                    progress: project.normalizedColonizationPercent,
+                    phase: project.phase,
+                    daysActive: daysActive
+                )
+                
+                // Middle: Information Hierarchy
+                VStack(alignment: .leading, spacing: 5) {
+                    // Strain title & Batch Number
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(store.displayTitle(name: project.strainName, sku: project.skuCode))
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Text("#\(project.batchNumber)")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundColor(MycoTheme.textSecondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1.5)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(4)
+                        
+                        Spacer()
+                        
+                        // Phase badge (clean pill)
+                        Text(project.phase.localized(isEnglish: store.isEnglish))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(project.phase.color)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(project.phase.color.opacity(0.14))
+                            .cornerRadius(6)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(project.phase.color.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                    
+                    // Substrate & Container description
+                    Text("\(project.containerName.isEmpty ? store.t(nl: "Standaard Setup", en: "Default Setup") : store.localizePresetName(project.containerName)) • \(project.substrateName.isEmpty ? store.t(nl: "Eigen Substraat", en: "Custom Substrate") : store.localizePresetName(project.substrateName))")
+                        .font(.caption)
+                        .foregroundColor(MycoTheme.textSecondary)
                         .lineLimit(1)
                     
-                    Text("#\(project.batchNumber)")
-                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                        .foregroundColor(MycoTheme.textSecondary)
-                    
-                    Spacer()
-                    
-                    // Phase badge (clean pill)
-                    Text(project.phase.localized(isEnglish: store.isEnglish))
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(project.phase.color)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(project.phase.color.opacity(0.14))
-                        .cornerRadius(6)
-                }
-                
-                // Substrate & Container description
-                Text("\(project.containerName.isEmpty ? store.t(nl: "Standaard Setup", en: "Default Setup") : store.localizePresetName(project.containerName)) • \(project.substrateName.isEmpty ? store.t(nl: "Eigen Substraat", en: "Custom Substrate") : store.localizePresetName(project.substrateName))")
-                    .font(.caption)
-                    .foregroundColor(MycoTheme.textSecondary)
-                    .lineLimit(1)
-                
-                // Telemetry & Tags Bar
-                HStack(spacing: 10) {
-                    // Temperature capsule
-                    HStack(spacing: 4) {
-                        Image(systemName: "thermometer.medium")
-                            .font(.system(size: 10))
-                            .foregroundColor(MycoTheme.amber)
-                        Text(project.latestTempC != nil ? String(format: "%.1f°C", project.latestTempC!) : "--°C")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.white.opacity(0.04))
-                    .cornerRadius(4)
-                    
-                    // Humidity capsule
-                    HStack(spacing: 4) {
-                        Image(systemName: "humidity.fill")
-                            .font(.system(size: 10))
-                            .foregroundColor(MycoTheme.blue)
-                        Text(project.latestHumidityPct != nil ? String(format: "%.0f%%", project.latestHumidityPct!) : "--%")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.9))
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.white.opacity(0.04))
-                    .cornerRadius(4)
-                    
-                    // Biological Efficiency (BE%) Badge if flushes logged
-                    if let be = store.bePercent(for: project.id), be > 0 {
-                        HStack(spacing: 3) {
-                            Image(systemName: "chart.line.uptrend.xyaxis")
-                                .font(.system(size: 8, weight: .bold))
-                            Text(String(format: "%.0f%% BE", be))
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    // Telemetry & Tags Bar
+                    HStack(spacing: 8) {
+                        // Temperature capsule
+                        HStack(spacing: 4) {
+                            Image(systemName: "thermometer.medium")
+                                .font(.system(size: 10))
+                                .foregroundColor(MycoTheme.amber)
+                            Text(project.latestTempC != nil ? String(format: "%.1f°C", project.latestTempC!) : "--°C")
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.9))
                         }
-                        .foregroundColor(be >= 100 ? MycoTheme.green : (be >= 70 ? MycoTheme.amber : MycoTheme.blue))
-                        .padding(.horizontal, 5)
+                        .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background((be >= 100 ? MycoTheme.green : (be >= 70 ? MycoTheme.amber : MycoTheme.blue)).opacity(0.18))
+                        .background(Color.white.opacity(0.04))
                         .cornerRadius(4)
-                    }
-                    
-                    // Tags preview (if any)
-                    if let firstTag = project.tags.first {
-                        Text(firstTag)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(firstTag.contains("Quarantaine") ? MycoTheme.red : (firstTag.contains("B&S") ? MycoTheme.amber : MycoTheme.blue))
-                            .padding(.horizontal, 6)
+                        
+                        // Humidity capsule
+                        HStack(spacing: 4) {
+                            Image(systemName: "humidity.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(MycoTheme.blue)
+                            Text(project.latestHumidityPct != nil ? String(format: "%.0f%%", project.latestHumidityPct!) : "--%")
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.04))
+                        .cornerRadius(4)
+                        
+                        // Biological Efficiency (BE%) Badge if flushes logged
+                        if let be = store.bePercent(for: project.id), be > 0 {
+                            HStack(spacing: 3) {
+                                Image(systemName: "chart.line.uptrend.xyaxis")
+                                    .font(.system(size: 8, weight: .bold))
+                                Text(String(format: "%.0f%% BE", be))
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            }
+                            .foregroundColor(be >= 100 ? MycoTheme.green : (be >= 70 ? MycoTheme.amber : MycoTheme.blue))
+                            .padding(.horizontal, 5)
                             .padding(.vertical, 2)
-                            .background(
-                                (firstTag.contains("Quarantaine") ? MycoTheme.red : (firstTag.contains("B&S") ? MycoTheme.amber : MycoTheme.blue)).opacity(0.15)
-                            )
+                            .background((be >= 100 ? MycoTheme.green : (be >= 70 ? MycoTheme.amber : MycoTheme.blue)).opacity(0.18))
                             .cornerRadius(4)
+                        }
+                        
+                        // Tags preview (if any)
+                        if let firstTag = project.tags.first {
+                            Text(firstTag)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(firstTag.contains("Quarantaine") ? MycoTheme.red : (firstTag.contains("B&S") ? MycoTheme.amber : MycoTheme.blue))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    (firstTag.contains("Quarantaine") ? MycoTheme.red : (firstTag.contains("B&S") ? MycoTheme.amber : MycoTheme.blue)).opacity(0.15)
+                                )
+                                .cornerRadius(4)
+                        }
+                        
+                        Spacer()
+                        
+                        // Subtle QR / ID chip
+                        Text(project.qrCodeID)
+                            .font(.system(size: 10, weight: .regular, design: .monospaced))
+                            .foregroundColor(MycoTheme.textSecondary.opacity(0.7))
                     }
-                    
-                    Spacer()
-                    
-                    // Subtle QR / ID chip
-                    Text(project.qrCodeID)
-                        .font(.system(size: 10, weight: .regular, design: .monospaced))
-                        .foregroundColor(MycoTheme.textSecondary.opacity(0.7))
                 }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(MycoTheme.textSecondary.opacity(0.6))
             }
             
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(MycoTheme.textSecondary.opacity(0.6))
+            // Subtle colonization progress line
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.06))
+                        .frame(height: 3)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [project.phase.color.opacity(0.6), project.phase.color],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(project.normalizedColonizationPercent / 100.0))), height: 3)
+                }
+            }
+            .frame(height: 3)
+            .padding(.top, 2)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(MycoTheme.card)
+        .background(
+            ZStack {
+                MycoTheme.card
+                LinearGradient(
+                    colors: [
+                        project.phase.color.opacity(0.05),
+                        Color.clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.02)],
+                        colors: [
+                            project.phase.color.opacity(0.25),
+                            Color.white.opacity(0.03)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.22), radius: 6, x: 0, y: 3)
     }
 }
 
@@ -1241,50 +1376,11 @@ struct ModernDashboardTabView: View {
                         demoModeBanner
                     }
                     
-                    // MARK: - 1. Serene Lab Status Banner
-                    HStack(alignment: .center) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(store.db.stealthMode ? "LabOS Cockpit" : store.t(nl: "Mijn Laboratorium", en: "My Laboratory"))
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                            
-                            HStack(spacing: 6) {
-                                Circle()
-                                    .fill(activeBatchesCount > 0 ? MycoTheme.green : MycoTheme.textSecondary)
-                                    .frame(width: 6, height: 6)
-                                Text(activeBatchesCount > 0 ? store.t(nl: "\(activeBatchesCount) actieve \(activeBatchesCount == 1 ? "batch" : "batches") • Optimaal", en: "\(activeBatchesCount) active \(activeBatchesCount == 1 ? "batch" : "batches") • Optimal") : store.t(nl: "Lab is gereed voor een nieuwe kweek", en: "Lab is ready for a new grow"))
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(MycoTheme.textSecondary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        // Prominent + Nieuwe Batch button in modern capsule style
-                        Button {
-                            showCreateBatch = true
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 13, weight: .bold))
-                                Text(store.t(nl: "Batch", en: "Batch"))
-                                    .font(.system(size: 13, weight: .bold))
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(
-                                LinearGradient(
-                                    colors: [MycoTheme.blue, MycoTheme.blue.opacity(0.8)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .cornerRadius(20)
-                            .shadow(color: MycoTheme.blue.opacity(0.35), radius: 6, x: 0, y: 2)
-                        }
-                    }
-                    .padding(.top, 4)
+                    // MARK: - 1. BiomeCore Cockpit Header
+                    biomeCoreHeader
+                    
+                    // MARK: - 1A. BiomeCore Lab Quick-KPI Strip
+                    biomeCoreKPIStrip
                     
                     // MARK: - 1B. Lab Climate & Telemetry Hero Card
                     if store.db.environmentConfig.isMaintenanceModeActive {
@@ -1330,6 +1426,8 @@ struct ModernDashboardTabView: View {
                                 }()
                                 
                                 Button {
+                                    let gen = UIImpactFeedbackGenerator(style: .light)
+                                    gen.impactOccurred()
                                     withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                                         selectedPhaseFilter = option
                                     }
@@ -1340,23 +1438,28 @@ struct ModernDashboardTabView: View {
                                         if count > 0 {
                                             Text("\(count)")
                                                 .font(.system(size: 10, weight: .bold, design: .rounded))
-                                                .padding(.horizontal, 5)
-                                                .padding(.vertical, 1)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 1.5)
                                                 .background(isSelected ? Color.white.opacity(0.25) : Color.white.opacity(0.08))
                                                 .clipShape(Capsule())
                                         }
                                     }
                                     .foregroundColor(isSelected ? .white : MycoTheme.textSecondary)
-                                    .padding(.horizontal, 12)
+                                    .padding(.horizontal, 13)
                                     .padding(.vertical, 7)
-                                    .background(isSelected ? MycoTheme.blue : MycoTheme.card)
+                                    .background(
+                                        isSelected
+                                            ? LinearGradient(colors: [MycoTheme.blue, Color(hex: "#3B82F6")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                            : LinearGradient(colors: [MycoTheme.card, MycoTheme.card.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    )
                                     .cornerRadius(20)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 20)
-                                            .stroke(isSelected ? MycoTheme.blue : MycoTheme.border, lineWidth: 1)
+                                            .stroke(isSelected ? MycoTheme.blue.opacity(0.6) : MycoTheme.border, lineWidth: 1)
                                     )
+                                    .shadow(color: isSelected ? MycoTheme.blue.opacity(0.25) : Color.clear, radius: 4, y: 1)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(ModernBouncyButtonStyle())
                             }
                         }
                         .padding(.vertical, 2)
@@ -1364,18 +1467,8 @@ struct ModernDashboardTabView: View {
                     
                     // MARK: - 4. Batches Grid or Clean Empty State
                     if filteredProjects.isEmpty {
-                        EmptyStateCard(
-                            icon: "flask.fill",
-                            title: store.t(nl: "Geen batches gevonden", en: "No batches found"),
-                            message: store.t(
-                                nl: "Je lab is gereed voor gebruik. Maak je eerste kweekproject aan om te starten.",
-                                en: "Your lab is ready. Create your first grow project to begin."
-                            ),
-                            buttonTitle: store.t(nl: "+ Eerste Batch Starten", en: "+ Start First Batch")
-                        ) {
-                            showCreateBatch = true
-                        }
-                        .padding(.top, 8)
+                        biomeCoreEmptyState
+                            .padding(.top, 8)
                     } else if isWideGrid {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 360), spacing: 14)], spacing: 14) {
                             ForEach(filteredProjects) { project in
@@ -1384,14 +1477,6 @@ struct ModernDashboardTabView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .contextMenu {
-                                    Button {
-                                        editingProject = project
-                                    } label: {
-                                        Label(store.t(nl: "Bewerk Batch Setup", en: "Edit Batch Setup"), systemImage: "pencil")
-                                    }
-
-                                    Divider()
-
                                     Button {
                                         editingProject = project
                                     } label: {
@@ -1432,6 +1517,14 @@ struct ModernDashboardTabView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .contextMenu {
+                                    Button {
+                                        editingProject = project
+                                    } label: {
+                                        Label(store.t(nl: "Bewerk Batch Setup", en: "Edit Batch Setup"), systemImage: "pencil")
+                                    }
+
+                                    Divider()
+
                                     Button {
                                         withAnimation {
                                             if let pIdx = store.db.projects.firstIndex(where: { $0.id == project.id }) {
@@ -1594,25 +1687,25 @@ struct ModernDashboardTabView: View {
     private var modularLabExpansionCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
-                Image(systemName: "plus.circle.fill")
-                    .foregroundColor(MycoTheme.green)
-                    .font(.system(size: 14))
-                Text(store.t(nl: "Lab Modules & Uitbreidingen", en: "Lab Modules & Expansions"))
+                Image(systemName: "cpu")
+                    .foregroundColor(Color.cyan)
+                    .font(.system(size: 13, weight: .bold))
+                Text(store.t(nl: "BiomeCore Lab Uitbreidingen", en: "BiomeCore Lab Expansions"))
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 Spacer()
-                Text(store.t(nl: "Optioneel", en: "Optional"))
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(MycoTheme.textSecondary)
+                Text(store.t(nl: "Plug & Play", en: "Plug & Play"))
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(Color.cyan)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color.cyan.opacity(0.12))
                     .clipShape(Capsule())
             }
             
             Text(store.t(
-                nl: "Kweek eenvoudig handmatig of breid stap voor stap uit met hardware zodra je lab groeit.",
-                en: "Grow simply by hand or expand step-by-step with hardware as your lab grows."
+                nl: "Kweek eenvoudig handmatig of koppel stap voor stap hardware sensoren en camera's voor geautomatiseerde cleanroom telemetrie.",
+                en: "Grow simply by hand or link hardware sensors and cameras step-by-step for automated cleanroom telemetry."
             ))
             .font(.system(size: 11))
             .foregroundColor(MycoTheme.textSecondary)
@@ -1620,6 +1713,8 @@ struct ModernDashboardTabView: View {
             HStack(spacing: 8) {
                 if !hasConfiguredCamera {
                     Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
                         showRemoteMonitor = true
                     } label: {
                         HStack(spacing: 5) {
@@ -1635,11 +1730,13 @@ struct ModernDashboardTabView: View {
                         .cornerRadius(8)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.teal.opacity(0.3), lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ModernBouncyButtonStyle())
                 }
                 
                 if !hasSmartDevices {
                     Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
                         showTuyaLabHub = true
                     } label: {
                         HStack(spacing: 5) {
@@ -1655,7 +1752,7 @@ struct ModernDashboardTabView: View {
                         .cornerRadius(8)
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(MycoTheme.blue.opacity(0.3), lineWidth: 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ModernBouncyButtonStyle())
                 }
                 
                 Spacer()
@@ -1665,6 +1762,259 @@ struct ModernDashboardTabView: View {
         .background(MycoTheme.card)
         .cornerRadius(14)
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(MycoTheme.border, lineWidth: 1))
+    }
+    
+    // MARK: - BiomeCore Labs Cockpit Header
+    private var biomeCoreHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 3) {
+                    if !store.db.stealthMode {
+                        HStack(spacing: 5) {
+                            Image(systemName: "atom")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color.cyan)
+                            Text("BIOMECORE LABS")
+                                .font(.system(size: 10, weight: .black, design: .monospaced))
+                                .tracking(1.2)
+                                .foregroundColor(Color.cyan)
+                            Text("•")
+                                .foregroundColor(Color.white.opacity(0.3))
+                            Text(store.t(nl: "CLEANROOM TELEMETRIE", en: "CLEANROOM TELEMETRY"))
+                                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                                .tracking(0.6)
+                                .foregroundColor(Color.white.opacity(0.7))
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3.5)
+                        .background(
+                            Capsule()
+                                .fill(Color.cyan.opacity(0.12))
+                                .overlay(Capsule().stroke(Color.cyan.opacity(0.25), lineWidth: 1))
+                        )
+                    }
+                    
+                    Text(store.db.stealthMode ? "LabOS Cockpit" : store.t(nl: "Mijn Laboratorium", en: "My Laboratory"))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(activeBatchesCount > 0 ? MycoTheme.green : MycoTheme.textSecondary)
+                            .frame(width: 6, height: 6)
+                            .overlay(
+                                Circle()
+                                    .stroke((activeBatchesCount > 0 ? MycoTheme.green : MycoTheme.textSecondary).opacity(0.4), lineWidth: 3)
+                            )
+                        Text(activeBatchesCount > 0
+                             ? store.t(nl: "\(activeBatchesCount) actieve \(activeBatchesCount == 1 ? "batch" : "batches") • Systeem Optimaal",
+                                       en: "\(activeBatchesCount) active \(activeBatchesCount == 1 ? "batch" : "batches") • System Nominal")
+                             : store.t(nl: "BiomeCore Cleanroom gereed voor inoculatie",
+                                       en: "BiomeCore Cleanroom ready for inoculation"))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(MycoTheme.textSecondary)
+                    }
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 8) {
+                    // Cleanroom Voice Assistant shortcut
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .light)
+                        gen.impactOccurred()
+                        showCleanroomVoice = true
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color.cyan.opacity(0.14))
+                                .frame(width: 36, height: 36)
+                                .overlay(Circle().stroke(Color.cyan.opacity(0.35), lineWidth: 1))
+                            Image(systemName: "waveform.and.mic")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(Color.cyan)
+                        }
+                    }
+                    .buttonStyle(ModernBouncyButtonStyle())
+                    .accessibilityLabel("Cleanroom Voice Assistant")
+                    
+                    // Prominent + Nieuwe Batch button in modern capsule style
+                    Button {
+                        let gen = UIImpactFeedbackGenerator(style: .medium)
+                        gen.impactOccurred()
+                        showCreateBatch = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .bold))
+                            Text(store.t(nl: "Batch", en: "Batch"))
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            LinearGradient(
+                                colors: [MycoTheme.blue, Color(hex: "#3B82F6")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .cornerRadius(20)
+                        .shadow(color: MycoTheme.blue.opacity(0.4), radius: 6, x: 0, y: 2)
+                    }
+                    .buttonStyle(ModernBouncyButtonStyle())
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+    
+    // MARK: - BiomeCore KPI Quick-Strip
+    private var biomeCoreKPIStrip: some View {
+        HStack(spacing: 10) {
+            // Active batches KPI
+            biomeKPITile(
+                icon: "flask.fill",
+                iconColor: MycoTheme.blue,
+                title: store.t(nl: "Actief", en: "Active"),
+                value: "\(activeBatchesCount)",
+                subtitle: store.t(nl: activeBatchesCount == 1 ? "Kweek batch" : "Kweek batches", en: activeBatchesCount == 1 ? "Grow batch" : "Grow batches")
+            )
+            
+            // Spawn vs Fruiting KPI
+            let spawnBulkCount = store.db.projects.filter { !$0.isArchived && ($0.phase == .spawn || $0.phase == .bulk || $0.phase == .liquidCulture || $0.phase == .agar) }.count
+            let fruitCount = store.db.projects.filter { !$0.isArchived && ($0.phase == .fruiting || $0.phase == .flushing) }.count
+            biomeKPITile(
+                icon: "leaf.fill",
+                iconColor: MycoTheme.green,
+                title: store.t(nl: "Fases", en: "Phases"),
+                value: "\(spawnBulkCount)/\(fruitCount)",
+                subtitle: store.t(nl: "Spawn / Vrucht", en: "Spawn / Fruit")
+            )
+            
+            // Biome Health / Cleanroom Telemetry KPI
+            let temp = store.db.environmentConfig.currentTempC
+            let rh = store.db.environmentConfig.currentHumidityPct
+            let vpd = MycoVPDCalculator.analyze(tempC: temp, humidityPct: rh)
+            biomeKPITile(
+                icon: "waveform.path.ecg",
+                iconColor: vpd?.color ?? Color.cyan,
+                title: store.t(nl: "Bio-VPD", en: "Bio-VPD"),
+                value: vpd != nil ? String(format: "%.2f", vpd!.vpdKPa) : (activeBatchesCount > 0 ? "Nominaal" : "--"),
+                subtitle: vpd != nil ? "kPa Deficit" : store.t(nl: "Status", en: "Status")
+            )
+        }
+    }
+
+    private func biomeKPITile(icon: String, iconColor: Color, title: String, value: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(iconColor)
+                Text(title.uppercased())
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundColor(MycoTheme.textSecondary)
+                Spacer(minLength: 0)
+            }
+            
+            Text(value)
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            
+            Text(subtitle)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(MycoTheme.textSecondary.opacity(0.85))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(hex: "#161B22").opacity(0.75))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(
+                            LinearGradient(
+                                colors: [iconColor.opacity(0.32), Color.white.opacity(0.04)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1
+                        )
+                )
+        )
+    }
+    
+    // MARK: - BiomeCore Empty State
+    private var biomeCoreEmptyState: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.cyan.opacity(0.12))
+                    .frame(width: 64, height: 64)
+                    .overlay(
+                        Circle()
+                            .stroke(Color.cyan.opacity(0.3), lineWidth: 1)
+                    )
+                Image(systemName: "atom")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(Color.cyan)
+            }
+            
+            VStack(spacing: 4) {
+                Text(store.t(nl: "BiomeCore Cleanroom Gereed", en: "BiomeCore Cleanroom Ready"))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                
+                Text(store.t(
+                    nl: "Geen batches gevonden voor deze selectie. Start je eerste kweekproject of pas het fasefilter aan.",
+                    en: "No batches found for this selection. Start your first grow project or adjust the phase filter."
+                ))
+                .font(.system(size: 12))
+                .foregroundColor(MycoTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+            }
+            
+            Button {
+                let gen = UIImpactFeedbackGenerator(style: .medium)
+                gen.impactOccurred()
+                showCreateBatch = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .bold))
+                    Text(store.t(nl: "+ Eerste Batch Starten", en: "+ Start First Batch"))
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(
+                    LinearGradient(
+                        colors: [MycoTheme.blue, Color(hex: "#3B82F6")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .cornerRadius(20)
+                .shadow(color: MycoTheme.blue.opacity(0.4), radius: 6, y: 2)
+            }
+            .buttonStyle(ModernBouncyButtonStyle())
+        }
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity)
+        .background(MycoTheme.card.opacity(0.7))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+        )
     }
 }
 

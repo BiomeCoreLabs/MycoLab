@@ -1,1037 +1,2107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>MycoLabs ⌬ Smart Mycology OS (Web Demo)</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="MycoLabs sovereign smart laboratory operating system for mushroom cultivation. Live interactive web application.">
-    <link rel="icon" type="image/jpeg" href="assets/screenshots/01_onboarding.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>MycoLabs ⌬ Precision Smart Mycology Operating System</title>
+  <meta name="description" content="MycoLabs — Interactive Web Application & Lab Station. Native smart mycology platform with live VPD microclimate telemetry, WebRTC grow camera, Tuya LAN relays, genetics lineage, and yield vaults.">
+  <meta name="theme-color" content="#070a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      --bg-base: #06080d;
+      --bg-sidebar: #090d15;
+      --bg-card: rgba(15, 23, 38, 0.72);
+      --bg-card-hover: rgba(22, 34, 56, 0.88);
+      --bg-pill: rgba(255, 255, 255, 0.06);
+      --border-glass: rgba(0, 255, 170, 0.16);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --accent-green: #00FFAA;
+      --accent-cyan: #00E5FF;
+      --accent-amber: #FFB300;
+      --accent-purple: #B388FF;
+      --accent-red: #FF5252;
+      --text-main: #F0F6FC;
+      --text-muted: #8B9BB4;
+      --text-dim: #4E5E77;
+      --sidebar-width: 260px;
+      --header-height: 64px;
+      --bottom-nav-height: 64px;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --glow-green: 0 0 20px rgba(0, 255, 170, 0.25);
+      --glow-cyan: 0 0 20px rgba(0, 229, 255, 0.25);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+    }
+    /* Layout */
+    #app-container {
+      display: flex;
+      width: 100vw;
+      min-height: 100vh;
+      position: relative;
+    }
+    /* Sidebar (Desktop / Tablet) */
+    aside.sidebar {
+      width: var(--sidebar-width);
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      z-index: 100;
+      transition: transform 0.25s ease;
+    }
+    .brand-section {
+      padding: 20px 20px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #00FFAA 0%, #007755 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: var(--glow-green);
+    }
+    .brand-text h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; color: #fff; }
+    .brand-text span { font-size: 11px; color: var(--accent-green); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
 
-    <style>
-        :root {
-            --bg-void: #05070A;
-            --bg-base: #090D14;
-            --bg-card: #0E1522;
-            --bg-card-secondary: #131C2D;
-            --bg-modal: #111A29;
-            --accent-green: #00FFAA;
-            --accent-green-glow: rgba(0, 255, 170, 0.35);
-            --accent-blue: #0A84FF;
-            --accent-purple: #5E5CE6;
-            --accent-cyan: #00E5FF;
-            --accent-amber: #FF9F0A;
-            --accent-red: #FF453A;
-            --text-primary: #FFFFFF;
-            --text-secondary: #8B9BB4;
-            --text-muted: #53627A;
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-card: rgba(255, 255, 255, 0.12);
-            --border-glow: rgba(0, 255, 170, 0.3);
-            --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-mono: "SF Mono", Monaco, Consolas, monospace;
-        }
+    .nav-group {
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .nav-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      padding: 6px 12px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+    }
+    .nav-item:hover {
+      background: var(--bg-pill);
+      color: var(--text-main);
+    }
+    .nav-item.active {
+      background: rgba(0, 255, 170, 0.12);
+      color: var(--accent-green);
+      border-color: rgba(0, 255, 170, 0.3);
+    }
+    .nav-item .icon { font-size: 17px; width: 22px; text-align: center; }
+    .nav-badge {
+      margin-left: auto;
+      background: rgba(0, 255, 170, 0.2);
+      color: var(--accent-green);
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body {
-            background-color: var(--bg-void);
-            color: var(--text-primary);
-            font-family: var(--font-system);
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .lan-status-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px var(--accent-green);
+      animation: pulseDot 2s infinite ease-in-out;
+    }
+    @keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
 
-        /* Ambient desktop backdrop */
-        .desktop-bg {
-            position: fixed; inset: 0;
-            background: 
-                radial-gradient(circle at 50% 0%, rgba(0, 255, 170, 0.08) 0%, transparent 60%),
-                radial-gradient(circle at 10% 80%, rgba(94, 92, 230, 0.06) 0%, transparent 50%),
-                radial-gradient(circle at 90% 80%, rgba(0, 229, 255, 0.05) 0%, transparent 50%),
-                #05070A;
-            z-index: 1;
-        }
+    /* Main Workspace Area */
+    main.workspace {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: radial-gradient(circle at 10% 10%, rgba(0, 255, 170, 0.04) 0%, transparent 45%),
+                  radial-gradient(circle at 90% 90%, rgba(0, 229, 255, 0.04) 0%, transparent 45%),
+                  var(--bg-base);
+    }
+    header.topbar {
+      height: var(--header-height);
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(9, 13, 21, 0.85);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .mobile-menu-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 22px;
+      cursor: pointer;
+    }
+    .location-crumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .location-crumb .chamber-pill {
+      background: rgba(0, 255, 170, 0.12);
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 255, 170, 0.25);
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .topbar-telemetry-strip {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .telemetry-item strong {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+    .vpd-badge-header {
+      background: linear-gradient(135deg, rgba(0, 255, 170, 0.18), rgba(0, 229, 255, 0.18));
+      border: 1px solid rgba(0, 255, 170, 0.4);
+      padding: 4px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent-green);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .vpd-badge-header:hover {
+      box-shadow: var(--glow-green);
+      transform: translateY(-1px);
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-action {
+      background: var(--bg-pill);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 7px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn-action:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-primary {
+      background: var(--accent-green);
+      color: #000;
+      border: none;
+      font-weight: 700;
+      box-shadow: var(--glow-green);
+    }
+    .btn-primary:hover {
+      background: #26ffb5;
+      transform: translateY(-1px);
+    }
 
-        /* Top Bar for Desktop View */
-        .top-web-bar {
-            position: fixed; top: 0; left: 0; right: 0; height: 42px;
-            background: rgba(9, 13, 20, 0.85); backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-subtle);
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 0 18px; z-index: 100; font-size: 13px; color: var(--text-secondary);
-        }
-        .top-web-bar b { color: #fff; }
-        .top-web-bar .brand-badge {
-            background: rgba(0, 255, 170, 0.15); color: var(--accent-green);
-            padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;
-            border: 1px solid rgba(0, 255, 170, 0.3);
-        }
-        .view-switcher {
-            display: flex; gap: 8px;
-        }
-        .btn-view-toggle {
-            background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border-subtle);
-            color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-view-toggle.active {
-            background: var(--accent-blue); border-color: var(--accent-blue);
-        }
+    /* Content View Container */
+    .view-content {
+      padding: 24px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Main App Container (Responsive iPhone / iPad / Desktop frame) */
-        .app-device-shell {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 440px;
-            height: calc(100vh - 54px);
-            max-height: 920px;
-            background: var(--bg-base);
-            border-radius: 46px;
-            box-shadow: 
-                0 0 0 3px #282e38,
-                0 0 0 6px #12161f,
-                0 25px 80px rgba(0,0,0,0.85),
-                0 0 50px rgba(0, 255, 170, 0.12);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            border: 6px solid #000;
-            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-            margin-top: 36px;
-        }
+    /* Grid Layouts */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1080px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
 
-        /* Fullscreen mode on small mobile devices or user toggle */
-        @media (max-width: 480px) {
-            body { padding: 0; }
-            .top-web-bar { display: none; }
-            .app-device-shell {
-                max-width: 100vw; height: 100vh; max-height: 100vh;
-                border-radius: 0; border: none; margin-top: 0;
-                box-shadow: none;
-            }
-        }
+    /* Cards */
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--accent-cyan);
+    }
 
-        .app-device-shell.mode-fullscreen {
-            max-width: 900px;
-            border-radius: 24px;
-        }
+    /* Camera Card */
+    .camera-viewport {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+    .camera-viewport video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .camera-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+    }
+    .live-badge {
+      background: rgba(255, 40, 40, 0.88);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 0 10px rgba(255, 40, 40, 0.5);
+    }
+    .rec-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulseDot 1.2s infinite;
+    }
+    .fps-badge {
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--accent-green);
+    }
+    /* AI Bounding Boxes overlay */
+    .ai-boxes-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+    }
+    .ai-boxes-overlay.active { display: block; }
+    .ai-box {
+      position: absolute;
+      border: 2px dashed var(--accent-green);
+      background: rgba(0, 255, 170, 0.08);
+      border-radius: 6px;
+      box-shadow: 0 0 12px rgba(0, 255, 170, 0.3);
+      animation: boxBlink 2.5s infinite ease-in-out;
+    }
+    @keyframes boxBlink { 0%, 100% { border-color: var(--accent-green); } 50% { border-color: var(--accent-cyan); } }
+    .ai-box-label {
+      position: absolute;
+      top: -22px;
+      left: -2px;
+      background: var(--accent-green);
+      color: #000;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .camera-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .lens-group {
+      display: flex;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+    }
+    .lens-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .lens-btn.active {
+      background: var(--accent-cyan);
+      color: #000;
+    }
 
-        /* Top iOS Status Bar & Dynamic Island */
-        .app-status-bar {
-            height: 44px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 24px 0;
-            font-size: 13px;
-            font-weight: 600;
-            color: #fff;
-            position: relative;
-            z-index: 50;
-            background: var(--bg-base);
-        }
-        .dynamic-island-shell {
-            position: absolute;
-            top: 8px; left: 50%; transform: translateX(-50%);
-            width: 125px; height: 30px;
-            background: #000;
-            border-radius: 20px;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 10px;
-            box-shadow: 0 0 4px rgba(255,255,255,0.15);
-            cursor: pointer;
-            transition: all 0.25s ease;
-        }
-        .dynamic-island-shell:hover { width: 160px; }
-        .island-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
-        .island-label { font-size: 10px; font-weight: 700; color: var(--accent-green); font-family: var(--font-mono); }
+    /* Environmental Smart Relays */
+    .relays-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .relay-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      transition: all 0.2s ease;
+    }
+    .relay-item.active {
+      border-color: rgba(0, 255, 170, 0.3);
+      background: rgba(0, 255, 170, 0.05);
+    }
+    .relay-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .relay-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-pill);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      border: 1px solid var(--border-subtle);
+      transition: all 0.2s ease;
+    }
+    .relay-item.active .relay-icon {
+      background: rgba(0, 255, 170, 0.18);
+      border-color: var(--accent-green);
+      box-shadow: var(--glow-green);
+    }
+    .relay-info h4 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .relay-info span { font-size: 12px; color: var(--text-muted); }
+    /* Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 26px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider-toggle {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: rgba(255, 255, 255, 0.12);
+      transition: .25s;
+      border-radius: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .slider-toggle:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .25s;
+      border-radius: 50%;
+    }
+    input:checked + .slider-toggle {
+      background-color: var(--accent-green);
+      border-color: var(--accent-green);
+    }
+    input:checked + .slider-toggle:before {
+      transform: translateX(20px);
+      background-color: #000;
+    }
 
-        /* App Navigation Header */
-        .app-header {
-            padding: 10px 18px;
-            display: flex; justify-content: space-between; align-items: center;
-            background: var(--bg-base);
-            border-bottom: 1px solid var(--border-subtle);
-            z-index: 40;
-        }
-        .app-header-left {
-            display: flex; align-items: center; gap: 10px;
-        }
-        .app-logo-badge {
-            width: 34px; height: 34px; border-radius: 9px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px; box-shadow: 0 2px 10px rgba(94, 92, 230, 0.4);
-        }
-        .app-title-group h1 { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; line-height: 1.1; }
-        .app-title-group span { font-size: 11px; color: var(--accent-green); font-weight: 600; }
-        .app-header-actions { display: flex; gap: 8px; align-items: center; }
-        .btn-header-action {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: var(--bg-card); border: 1px solid var(--border-subtle);
-            color: #fff; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; font-size: 14px; transition: all 0.2s;
-        }
-        .btn-header-action:hover { background: var(--bg-card-secondary); border-color: rgba(255,255,255,0.25); }
+    /* Telemetry Metrics Row */
+    .telemetry-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 900px) {
+      .telemetry-cards-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-green), transparent);
+      opacity: 0.6;
+    }
+    .metric-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .metric-val {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .metric-unit { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+    .metric-sub {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-green);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
 
-        /* App Main Scroll Area */
-        .app-content-scroll {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 16px;
-            position: relative;
-            -webkit-overflow-scrolling: touch;
-        }
-        .app-content-scroll::-webkit-scrollbar { width: 4px; }
-        .app-content-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    /* Active Batches Section */
+    .batches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .batch-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .batch-card:hover {
+      border-color: var(--border-glass);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .batch-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .batch-strain { font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 2px; }
+    .batch-code { font-size: 11px; font-family: monospace; color: var(--accent-green); font-weight: 700; }
+    .batch-stage-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 8px;
+      background: rgba(0, 255, 170, 0.12);
+      color: var(--accent-green);
+      border: 1px solid rgba(0, 255, 170, 0.25);
+    }
+    .batch-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .progress-circle-wrap {
+      width: 58px;
+      height: 58px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .progress-circle-wrap svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .progress-circle-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 6;
+    }
+    .progress-circle-val {
+      fill: none;
+      stroke: var(--accent-green);
+      stroke-width: 6;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.5s ease;
+    }
+    .progress-text {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .batch-details-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .batch-details-list strong { color: var(--text-main); }
+    .batch-actions-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 14px;
+    }
+    .batch-btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-pill);
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .batch-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .batch-btn.harvest-btn {
+      background: rgba(0, 255, 170, 0.15);
+      border-color: rgba(0, 255, 170, 0.35);
+      color: var(--accent-green);
+    }
+    .batch-btn.harvest-btn:hover {
+      background: var(--accent-green);
+      color: #000;
+    }
 
-        /* TAB 0: DASHBOARD */
-        .tab-view { display: none; }
-        .tab-view.active { display: block; animation: slideIn 0.2s ease-out; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    /* Mobile Bottom Navigation */
+    nav.bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: var(--bottom-nav-height);
+      background: rgba(9, 13, 21, 0.94);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border-subtle);
+      z-index: 100;
+      align-items: center;
+      justify-content: space-around;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      flex: 1;
+      padding: 6px 0;
+    }
+    .bottom-nav-item .icon { font-size: 18px; }
+    .bottom-nav-item.active { color: var(--accent-green); }
+    .floating-center-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #00FFAA, #00BFA5);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 16px rgba(0, 255, 170, 0.4);
+      transform: translateY(-12px);
+      cursor: pointer;
+      border: 3px solid var(--bg-base);
+    }
 
-        /* Camera Live Card */
-        .camera-card {
-            background: #000;
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            margin-bottom: 16px;
-            border: 1px solid var(--border-card);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            aspect-ratio: 16/10;
-        }
-        .camera-video {
-            width: 100%; height: 100%; object-fit: cover;
-        }
-        .camera-overlay-top {
-            position: absolute; top: 12px; left: 12px; right: 12px;
-            display: flex; justify-content: space-between; align-items: center;
-            z-index: 5;
-        }
-        .camera-tag {
-            background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(8px);
-            padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;
-            display: flex; align-items: center; gap: 6px;
-        }
-        .cam-dot-rec { width: 7px; height: 7px; border-radius: 50%; background: #FF3B30; animation: blink 1.2s infinite; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .camera-lens-bar {
-            position: absolute; bottom: 10px; left: 12px; right: 12px;
-            display: flex; justify-content: space-between; align-items: center;
-            background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
-            padding: 4px 8px; border-radius: 12px; font-size: 11px;
-        }
-        .lens-btn {
-            background: transparent; border: none; color: #fff; font-size: 11px; font-weight: 600;
-            padding: 3px 8px; border-radius: 6px; cursor: pointer;
-        }
-        .lens-btn.active { background: rgba(255,255,255,0.25); color: var(--accent-green); }
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #0D131F;
+      border: 1px solid var(--border-glass);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 520px;
+      padding: 28px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 22px;
+      cursor: pointer;
+    }
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--accent-green);
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
 
-        /* Telemetry Cards Grid */
-        .section-header {
-            font-size: 13px; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 10px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .telemetry-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-        .telemetry-tile {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 14px;
-            position: relative;
-            transition: all 0.2s;
-        }
-        .telemetry-tile.highlight {
-            border-color: rgba(0, 255, 170, 0.35);
-            background: linear-gradient(180deg, rgba(0, 255, 170, 0.08), var(--bg-card));
-        }
-        .tile-top { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); font-weight: 600; }
-        .tile-val { font-size: 24px; font-weight: 900; margin: 4px 0; font-family: var(--font-mono); color: #fff; }
-        .tile-val span { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
-        .tile-badge {
-            display: inline-flex; align-items: center; gap: 4px;
-            font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px;
-        }
-        .badge-optimal { background: rgba(0, 255, 170, 0.15); color: var(--accent-green); }
-        .badge-warn { background: rgba(255, 159, 10, 0.15); color: var(--accent-amber); }
-        .badge-danger { background: rgba(255, 69, 58, 0.15); color: var(--accent-red); }
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(13, 19, 31, 0.95);
+      border: 1px solid var(--accent-green);
+      backdrop-filter: blur(16px);
+      padding: 12px 24px;
+      border-radius: 30px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 8px 32px rgba(0, 255, 170, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 2000;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
 
-        /* Active Batches */
-        .batch-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .batch-card:hover { border-color: rgba(255,255,255,0.25); background: var(--bg-card-secondary); }
-        
-        /* Circular Colonization Progress Ring */
-        .ring-container {
-            width: 52px; height: 52px; position: relative; display: flex; align-items: center; justify-content: center;
-        }
-        .ring-svg { transform: rotate(-90deg); width: 52px; height: 52px; }
-        .ring-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 5; }
-        .ring-progress {
-            fill: none; stroke: var(--accent-green); stroke-width: 5; stroke-linecap: round;
-            stroke-dasharray: 138; stroke-dashoffset: 22; transition: stroke-dashoffset 0.5s ease;
-        }
-        .ring-text { position: absolute; font-size: 11px; font-weight: 800; font-family: var(--font-mono); }
-
-        .batch-info { flex: 1; }
-        .batch-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px; }
-        .batch-meta { font-size: 11px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
-        .batch-phase-tag {
-            background: rgba(0, 229, 255, 0.15); color: var(--accent-cyan);
-            padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700;
-        }
-        .btn-batch-action {
-            background: rgba(255,255,255,0.08); border: 1px solid var(--border-subtle);
-            color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600;
-            cursor: pointer; transition: all 0.2s;
-        }
-        .btn-batch-action:hover { background: var(--accent-green); color: #000; }
-
-        /* Actuator Quick Dock */
-        .actuators-strip {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .actuator-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 14px;
-            padding: 12px 10px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.2s;
-        }
-        .actuator-card.active {
-            border-color: var(--accent-green);
-            background: linear-gradient(180deg, rgba(0, 255, 170, 0.12), var(--bg-card));
-        }
-        .act-icon { font-size: 20px; margin-bottom: 4px; }
-        .act-name { font-size: 12px; font-weight: 700; }
-        .act-sub { font-size: 10px; color: var(--text-secondary); }
-        .act-status-pill {
-            display: inline-block; font-size: 9px; font-weight: 700;
-            padding: 2px 6px; border-radius: 4px; margin-top: 6px;
-        }
-        .act-status-pill.on { background: rgba(0, 255, 170, 0.2); color: var(--accent-green); }
-        .act-status-pill.off { background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); }
-
-        /* TAB 1: CULTURES & GENETICS */
-        .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; }
-        .chip {
-            background: var(--bg-card); border: 1px solid var(--border-subtle);
-            color: var(--text-secondary); padding: 5px 12px; border-radius: 12px;
-            font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer;
-        }
-        .chip.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
-
-        .culture-card {
-            background: var(--bg-card); border: 1px solid var(--border-subtle);
-            border-radius: 16px; padding: 14px; margin-bottom: 12px; display: flex; gap: 12px;
-        }
-        .culture-avatar {
-            width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card-secondary);
-            display: flex; align-items: center; justify-content: center; font-size: 22px;
-            border: 1px solid var(--border-subtle);
-        }
-        .culture-details { flex: 1; }
-        .culture-title { font-size: 14px; font-weight: 700; color: #fff; }
-        .culture-species { font-size: 11px; color: var(--text-secondary); font-style: italic; }
-        .culture-tags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-        .c-tag { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.08); color: var(--text-secondary); }
-
-        /* TAB 2: STASH & STOCK */
-        .stash-summary-banner {
-            background: linear-gradient(135deg, rgba(10, 132, 255, 0.15), rgba(94, 92, 230, 0.15));
-            border: 1px solid rgba(10, 132, 255, 0.3); border-radius: 18px;
-            padding: 16px; margin-bottom: 16px; text-align: center;
-        }
-        .stash-total-val { font-size: 32px; font-weight: 900; font-family: var(--font-mono); color: #fff; }
-        .stash-total-label { font-size: 12px; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase; }
-
-        .stash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-        .jar-card {
-            background: var(--bg-card); border: 1px solid var(--border-subtle);
-            border-radius: 14px; padding: 12px; text-align: center;
-        }
-        .jar-icon { font-size: 28px; margin-bottom: 4px; }
-        .jar-name { font-size: 13px; font-weight: 700; color: #fff; }
-        .jar-weight { font-size: 18px; font-weight: 800; color: var(--accent-green); font-family: var(--font-mono); margin: 2px 0; }
-        .jar-flush { font-size: 10px; color: var(--text-secondary); }
-
-        /* TAB 3: CALCULATORS & LAB PREP */
-        .calc-box {
-            background: var(--bg-card); border: 1px solid var(--border-subtle);
-            border-radius: 16px; padding: 16px; margin-bottom: 16px;
-        }
-        .calc-title { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .input-group { margin-bottom: 12px; }
-        .input-group label { display: block; font-size: 12px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
-        .input-group input {
-            width: 100%; background: #070B12; border: 1px solid var(--border-card);
-            border-radius: 10px; padding: 10px 14px; color: #fff; font-size: 14px;
-            font-family: var(--font-mono); outline: none; transition: border-color 0.2s;
-        }
-        .input-group input:focus { border-color: var(--accent-green); }
-        .calc-result-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-            background: #070B12; border-radius: 12px; padding: 12px; text-align: center;
-        }
-        .res-num { font-size: 16px; font-weight: 800; color: var(--accent-green); font-family: var(--font-mono); }
-        .res-lbl { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; }
-
-        /* Bottom Tab Bar */
-        .app-tab-bar {
-            height: 72px;
-            background: rgba(14, 21, 34, 0.96);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border-subtle);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 4px 10px 14px;
-            position: relative;
-            z-index: 50;
-        }
-        .tab-btn-app {
-            display: flex; flex-direction: column; align-items: center; gap: 3px;
-            background: transparent; border: none; color: var(--text-muted);
-            font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-            width: 58px;
-        }
-        .tab-btn-app.active { color: var(--accent-green); }
-        .tab-btn-app.active .tab-icon-app { transform: scale(1.15); }
-        .tab-icon-app { font-size: 18px; transition: transform 0.2s ease; }
-
-        /* Floating Center AI Scanner Button */
-        .btn-center-scanner {
-            width: 52px; height: 52px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
-            border: none; color: #fff; font-size: 24px;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 18px rgba(94, 92, 230, 0.5);
-            cursor: pointer; transform: translateY(-12px);
-            transition: all 0.2s;
-        }
-        .btn-center-scanner:hover { transform: translateY(-14px) scale(1.05); }
-
-        /* Modals & Overlays */
-        .app-modal-overlay {
-            position: absolute; inset: 0; background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px); z-index: 200; display: none;
-            align-items: flex-end; justify-content: center;
-        }
-        .app-modal-overlay.open { display: flex; animation: modalFade 0.2s ease-out; }
-        @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
-
-        .modal-sheet {
-            background: var(--bg-modal); border-top: 1px solid var(--border-glow);
-            border-radius: 28px 28px 0 0; width: 100%; max-height: 85%;
-            padding: 20px 20px 34px; overflow-y: auto; position: relative;
-            animation: sheetUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-        .modal-drag-pill { width: 38px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; margin: 0 auto 16px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .modal-header h3 { font-size: 18px; font-weight: 800; color: #fff; }
-        .btn-modal-close {
-            background: rgba(255,255,255,0.1); border: none; color: #fff;
-            width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
-            font-size: 13px; font-weight: bold;
-        }
-
-        /* Voice Waveform Animation */
-        .voice-wave-container {
-            display: flex; justify-content: center; align-items: center; gap: 6px;
-            height: 60px; margin: 20px 0;
-        }
-        .wave-bar {
-            width: 4px; height: 16px; border-radius: 2px; background: var(--accent-green);
-            animation: waveMotion 1s ease-in-out infinite;
-        }
-        .wave-bar:nth-child(2) { animation-delay: 0.15s; }
-        .wave-bar:nth-child(3) { animation-delay: 0.3s; }
-        .wave-bar:nth-child(4) { animation-delay: 0.45s; }
-        .wave-bar:nth-child(5) { animation-delay: 0.6s; }
-        @keyframes waveMotion { 0%, 100% { height: 10px; } 50% { height: 46px; } }
-
-        /* Toast notifications */
-        .app-toast {
-            position: absolute; top: 54px; left: 20px; right: 20px;
-            background: rgba(22, 27, 34, 0.95); border: 1px solid var(--accent-green);
-            border-radius: 30px; padding: 10px 16px; display: none; align-items: center; gap: 10px;
-            font-size: 12px; font-weight: 700; color: #fff; z-index: 150;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-        }
-        .app-toast.show { display: flex; animation: slideDown 0.3s ease; }
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        /* Home Indicator Bar */
-        .home-indicator-pill {
-            width: 130px; height: 4px; background: rgba(255,255,255,0.3);
-            border-radius: 2px; margin: 4px auto 2px;
-        }
-    </style>
+    /* Responsive Adaptations */
+    @media (max-width: 900px) {
+      aside.sidebar { display: none; }
+      nav.bottom-nav { display: flex; }
+      .mobile-menu-btn { display: block; }
+      .topbar-telemetry-strip { display: none; }
+      main.workspace { padding-bottom: calc(var(--bottom-nav-height) + 20px); }
+      .view-content { padding: 16px; }
+      header.topbar { padding: 0 16px; }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="desktop-bg"></div>
+<div id="toast"><span>🍄</span> <span id="toast-text">Notification</span></div>
 
-    <!-- Desktop Companion Bar -->
-    <div class="top-web-bar">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span>MycoLabs ⌬ Smart Mycology Studio</span>
-            <span class="brand-badge">v1.0.0-beta Native WebApp</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 14px;">
-            <div class="view-switcher">
-                <button class="btn-view-toggle active" id="btnModePhone" onclick="switchDeviceShell('phone')">📱 iPhone View</button>
-                <button class="btn-view-toggle" id="btnModeTablet" onclick="switchDeviceShell('tablet')">🖥️ Desktop / iPad View</button>
-            </div>
-            <a href="https://github.com/BiomeCoreLabs/MycoLabs" target="_blank" rel="noopener" style="color: var(--accent-green); text-decoration: none; font-weight: 600;">GitHub Source</a>
-        </div>
+<div id="app-container">
+  <!-- Desktop / Tablet Sidebar -->
+  <aside class="sidebar">
+    <div class="brand-section">
+      <div class="brand-logo">⌬</div>
+      <div class="brand-text">
+        <h1>MycoLabs</h1>
+        <span>Smart OS v1.0.0-beta</span>
+      </div>
     </div>
 
-    <!-- Interactive App Replica Shell -->
-    <div class="app-device-shell" id="appDeviceShell">
-        
-        <!-- Toast Notification Bar -->
-        <div class="app-toast" id="appToast">
-            <span id="toastIcon">💧</span>
-            <span id="toastText">Ultrasonic Humidifier activated (15m pulse)</span>
-        </div>
+    <div class="nav-group">
+      <div class="nav-label">Laboratory Suite</div>
+      <a class="nav-item active" onclick="switchTab('dashboard')">
+        <span class="icon">📊</span>
+        <span>Dashboard</span>
+        <span class="nav-badge" id="nav-badge-batches">3</span>
+      </a>
+      <a class="nav-item" onclick="switchTab('genetics')">
+        <span class="icon">🧬</span>
+        <span>Genetics & Agar</span>
+      </a>
+      <a class="nav-item" onclick="switchTab('stash')">
+        <span class="icon">🫙</span>
+        <span>Stash & Vault</span>
+        <span class="nav-badge" style="background:rgba(0,229,255,0.2);color:var(--accent-cyan);" id="nav-badge-stash">1.48kg</span>
+      </a>
+      <a class="nav-item" onclick="switchTab('tools')">
+        <span class="icon">🧮</span>
+        <span>Tools & Presets</span>
+      </a>
+      <a class="nav-item" onclick="switchTab('camera')">
+        <span class="icon">📹</span>
+        <span>Chamber 01 Feed</span>
+      </a>
 
-        <!-- iOS Status Bar & Dynamic Island -->
-        <div class="app-status-bar">
-            <span>9:41</span>
-            <div class="dynamic-island-shell" onclick="openModal('voice')">
-                <span class="island-indicator"></span>
-                <span class="island-label" id="islandLabel">VPD 0.38 kPa</span>
-            </div>
-            <div style="display: flex; gap: 5px; font-size: 11px;">
-                <span>5G</span>
-                <span>100% 🔋</span>
-            </div>
-        </div>
-
-        <!-- App Native Top Header -->
-        <div class="app-header">
-            <div class="app-header-left">
-                <div class="app-logo-badge">🍄</div>
-                <div class="app-title-group">
-                    <h1>MycoLabs</h1>
-                    <span>● HUB ONLINE (LOCAL LAN)</span>
-                </div>
-            </div>
-            <div class="app-header-actions">
-                <button class="btn-header-action" onclick="openModal('voice')" title="Cleanroom Voice Console">🎙️</button>
-                <button class="btn-header-action" onclick="openModal('info')" title="About & Settings">⚙️</button>
-            </div>
-        </div>
-
-        <!-- App Main Content Area -->
-        <div class="app-content-scroll">
-            
-            <!-- TAB 0: DASHBOARD -->
-            <div class="tab-view active" id="tab0">
-                <!-- Grow Camera Feed Card -->
-                <div class="camera-card">
-                    <video class="camera-video" autoplay loop muted playsinline poster="assets/screenshots/01_dashboard_demo.png">
-                        <source src="assets/animycolab.mp4" type="video/mp4">
-                    </video>
-                    <div class="camera-overlay-top">
-                        <div class="camera-tag">
-                            <span class="cam-dot-rec"></span>
-                            <span>CHAMBER 01 • WEBRTC LIVE</span>
-                        </div>
-                        <div class="camera-tag" style="color: var(--accent-green);">
-                            <span>1080p 30FPS</span>
-                        </div>
-                    </div>
-                    <div class="camera-lens-bar">
-                        <div>
-                            <button class="lens-btn" onclick="selectLens(this)">0.5x</button>
-                            <button class="lens-btn active" onclick="selectLens(this)">1.0x</button>
-                            <button class="lens-btn" onclick="selectLens(this)">3.0x</button>
-                        </div>
-                        <span style="color: var(--text-secondary); font-size: 10px;">Timelapse Active (Every 15m)</span>
-                    </div>
-                </div>
-
-                <!-- Live Microclimate Telemetry Grid -->
-                <div class="section-header">
-                    <span>Thermodynamic Microclimate</span>
-                    <span style="color: var(--accent-green); font-size: 11px;">Arden Buck Psychrometric</span>
-                </div>
-                <div class="telemetry-grid">
-                    <div class="telemetry-tile highlight">
-                        <div class="tile-top">
-                            <span>VAPOR PRESSURE DEFICIT</span>
-                            <span>💧</span>
-                        </div>
-                        <div class="tile-val" id="dispVpd">0.38 <span>kPa</span></div>
-                        <span class="tile-badge badge-optimal" id="badgeVpd">● Optimal Fruiting Zone</span>
-                    </div>
-                    <div class="telemetry-tile">
-                        <div class="tile-top">
-                            <span>TEMPERATURE</span>
-                            <span>🌡️</span>
-                        </div>
-                        <div class="tile-val" id="dispTemp">21.5 <span>°C</span></div>
-                        <span class="tile-badge badge-optimal">● Target Range OK</span>
-                    </div>
-                    <div class="telemetry-tile">
-                        <div class="tile-top">
-                            <span>RELATIVE HUMIDITY</span>
-                            <span>💨</span>
-                        </div>
-                        <div class="tile-val" id="dispRh">90.2 <span>% RH</span></div>
-                        <span class="tile-badge badge-optimal">● Evaporation Active</span>
-                    </div>
-                    <div class="telemetry-tile">
-                        <div class="tile-top">
-                            <span>CO₂ LEVEL</span>
-                            <span>🌿</span>
-                        </div>
-                        <div class="tile-val">740 <span>PPM</span></div>
-                        <span class="tile-badge badge-optimal">● FAE Vent OK</span>
-                    </div>
-                </div>
-
-                <!-- Actuators Quick Dock -->
-                <div class="section-header">
-                    <span>Hardware Relays (Tuya LAN / MQTT)</span>
-                    <span style="font-size: 11px; color: var(--accent-cyan);">74W Total</span>
-                </div>
-                <div class="actuators-strip">
-                    <div class="actuator-card active" id="actHumid" onclick="toggleAct('Humid', 'Ultrasonic Mist', '💧')">
-                        <div class="act-icon">💧</div>
-                        <div class="act-name">Humidifier</div>
-                        <div class="act-sub">32W • Mist</div>
-                        <span class="act-status-pill on" id="pillHumid">ACTIVE</span>
-                    </div>
-                    <div class="actuator-card" id="actFan" onclick="toggleAct('Fan', 'FAE Duct Fan', '🌀')">
-                        <div class="act-icon">🌀</div>
-                        <div class="act-name">FAE Fan</div>
-                        <div class="act-sub">18W • Exhaust</div>
-                        <span class="act-status-pill off" id="pillFan">STANDBY</span>
-                    </div>
-                    <div class="actuator-card active" id="actLight" onclick="toggleAct('Light', '6500K LED', '💡')">
-                        <div class="act-icon">💡</div>
-                        <div class="act-name">6500K LED</div>
-                        <div class="act-sub">24W • 12h Cycle</div>
-                        <span class="act-status-pill on" id="pillLight">ON</span>
-                    </div>
-                </div>
-
-                <!-- Active Batches -->
-                <div class="section-header">
-                    <span>Active Grow Batches</span>
-                    <button style="background: none; border: none; color: var(--accent-blue); font-size: 12px; font-weight: 700; cursor: pointer;" onclick="showToast('🍄 Add Batch Shortcut Pressed', '✨')">+ New Batch</button>
-                </div>
-                
-                <div class="batch-card" onclick="openBatchDetail('Lion's Mane Batch #04')">
-                    <div class="ring-container">
-                        <svg class="ring-svg" viewBox="0 0 52 52">
-                            <circle class="ring-bg" cx="26" cy="26" r="22"/>
-                            <circle class="ring-progress" cx="26" cy="26" r="22" style="stroke-dashoffset: 24;"/>
-                        </svg>
-                        <span class="ring-text">84%</span>
-                    </div>
-                    <div class="batch-info">
-                        <div class="batch-title">Lion's Mane (H. erinaceus) #04</div>
-                        <div class="batch-meta">
-                            <span class="batch-phase-tag">FRUITING</span>
-                            <span>Day 14/21 • 3 Substrate Blocks</span>
-                        </div>
-                    </div>
-                    <button class="btn-batch-action" onclick="event.stopPropagation(); showToast('💧 Misting pulse triggered for Lion's Mane #04', '💧')">Mist</button>
-                </div>
-
-                <div class="batch-card" onclick="openBatchDetail('Blue Oyster Batch #07')">
-                    <div class="ring-container">
-                        <svg class="ring-svg" viewBox="0 0 52 52">
-                            <circle class="ring-bg" cx="26" cy="26" r="22"/>
-                            <circle class="ring-progress" cx="26" cy="26" r="22" style="stroke-dashoffset: 8; stroke: var(--accent-blue);"/>
-                        </svg>
-                        <span class="ring-text">95%</span>
-                    </div>
-                    <div class="batch-info">
-                        <div class="batch-title">Blue Oyster (P. ostreatus) #07</div>
-                        <div class="batch-meta">
-                            <span class="batch-phase-tag" style="background: rgba(10, 132, 255, 0.15); color: var(--accent-blue);">COLONIZATION</span>
-                            <span>Day 8/14 • Rye Grain Spawn</span>
-                        </div>
-                    </div>
-                    <button class="btn-batch-action" onclick="event.stopPropagation(); showToast('📸 Photo inspection logged for Batch #07', '📷')">Inspect</button>
-                </div>
-
-            </div>
-
-            <!-- TAB 1: CULTURES & GENETICS -->
-            <div class="tab-view" id="tab1">
-                <div class="filter-chips">
-                    <button class="chip active">All Cultures (8)</button>
-                    <button class="chip">Agar Plates</button>
-                    <button class="chip">Liquid Culture</button>
-                    <button class="chip">Spore Prints</button>
-                </div>
-
-                <div class="culture-card">
-                    <div class="culture-avatar">🧫</div>
-                    <div class="culture-details">
-                        <div class="culture-title">Lion's Mane • Hericium Isol. P2</div>
-                        <div class="culture-species">Hericium erinaceus • MEA Sector Isolation</div>
-                        <div class="culture-tags">
-                            <span class="c-tag">Generation: P2</span>
-                            <span class="c-tag" style="color: var(--accent-green);">100% Contam-Free</span>
-                            <span class="c-tag">SKU: LM-AG-04</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="culture-card">
-                    <div class="culture-avatar">🧪</div>
-                    <div class="culture-details">
-                        <div class="culture-title">Golden Enoki LC Master</div>
-                        <div class="culture-species">Flammulina velutipes • 4% Honey Solution</div>
-                        <div class="culture-tags">
-                            <span class="c-tag">Vol: 500ml</span>
-                            <span class="c-tag" style="color: var(--accent-cyan);">Vigorous Mycelium</span>
-                            <span class="c-tag">SKU: GE-LC-01</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="culture-card">
-                    <div class="culture-avatar">🍄</div>
-                    <div class="culture-details">
-                        <div class="culture-title">King Oyster Spore Print #03</div>
-                        <div class="culture-species">Pleurotus eryngii • Sterile Foil Fold</div>
-                        <div class="culture-tags">
-                            <span class="c-tag">Vault: Dry Desiccated</span>
-                            <span class="c-tag">SKU: KO-SP-03</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: STASH & STOCK -->
-            <div class="tab-view" id="tab2">
-                <div class="stash-summary-banner">
-                    <div class="stash-total-val">1,480 <span>g</span></div>
-                    <div class="stash-total-label">Total Dried Mycological Yield</div>
-                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                        Average Dehydration Moisture Loss: 91.4% • 100% Food-Grade Sealed
-                    </div>
-                </div>
-
-                <div class="section-header">
-                    <span>Vault Inventory (Mason Jars)</span>
-                    <button style="background: none; border: none; color: var(--accent-green); font-size: 12px; font-weight: 700; cursor: pointer;" onclick="showToast('🖨️ QR Label sheet prepared for AirPrint', '🏷️')">Print QR</button>
-                </div>
-
-                <div class="stash-grid">
-                    <div class="jar-card">
-                        <div class="jar-icon">🫙</div>
-                        <div class="jar-name">Lion's Mane</div>
-                        <div class="jar-weight">340 g</div>
-                        <div class="jar-flush">Flush #1 • Desiccant Pack</div>
-                    </div>
-                    <div class="jar-card">
-                        <div class="jar-icon">🫙</div>
-                        <div class="jar-name">Blue Oyster</div>
-                        <div class="jar-weight">520 g</div>
-                        <div class="jar-flush">Flush #2 • Dehydrated 48°C</div>
-                    </div>
-                    <div class="jar-card">
-                        <div class="jar-icon">🫙</div>
-                        <div class="jar-name">Reishi Antler</div>
-                        <div class="jar-weight">210 g</div>
-                        <div class="jar-flush">Dry Cut Slices • 0% RH</div>
-                    </div>
-                    <div class="jar-card">
-                        <div class="jar-icon">🫙</div>
-                        <div class="jar-name">Golden Enoki</div>
-                        <div class="jar-weight">410 g</div>
-                        <div class="jar-flush">Vacuum Sealed Pack</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 3: TOOLS & CALCULATORS -->
-            <div class="tab-view" id="tab3">
-                <div class="calc-box">
-                    <div class="calc-title">
-                        <span>🧮 CVG Substrate Scaler</span>
-                        <span style="font-size: 11px; color: var(--accent-green); margin-left: auto;">Field Capacity</span>
-                    </div>
-                    <div class="input-group">
-                        <label>Dry Coco Coir Block (Grams):</label>
-                        <input type="number" id="inputCoir" value="650" oninput="recalcCVG()">
-                    </div>
-                    <div class="calc-result-grid">
-                        <div>
-                            <div class="res-num" id="resVerm">520g</div>
-                            <div class="res-lbl">Vermiculite</div>
-                        </div>
-                        <div>
-                            <div class="res-num" id="resGyp">80g</div>
-                            <div class="res-lbl">Gypsum</div>
-                        </div>
-                        <div>
-                            <div class="res-num" id="resWater">3.4L</div>
-                            <div class="res-lbl">Boiling Water</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="calc-box">
-                    <div class="calc-title">
-                        <span>⚖️ Biological Efficiency (BE%)</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <div class="input-group">
-                            <label>Fresh Yield (g):</label>
-                            <input type="number" id="inputYield" value="950" oninput="recalcBE()">
-                        </div>
-                        <div class="input-group">
-                            <label>Dry Spawn (g):</label>
-                            <input type="number" id="inputSpawn" value="800" oninput="recalcBE()">
-                        </div>
-                    </div>
-                    <div style="background: #070B12; border-radius: 10px; padding: 10px; text-align: center;">
-                        <span style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Calculated BE%:</span>
-                        <div style="font-size: 22px; font-weight: 900; color: var(--accent-cyan); font-family: var(--font-mono);" id="resBE">118.8%</div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Native iOS App Bottom Tab Bar -->
-        <div class="app-tab-bar">
-            <button class="tab-btn-app active" onclick="switchAppTab(0, this)">
-                <span class="tab-icon-app">📊</span>
-                <span>Dashboard</span>
-            </button>
-            <button class="tab-btn-app" onclick="switchAppTab(1, this)">
-                <span class="tab-icon-app">🧬</span>
-                <span>Genetics</span>
-            </button>
-
-            <!-- Center Floating AI & QR Scanner Button -->
-            <button class="btn-center-scanner" onclick="openModal('scanner')" title="AI Vision & QR Scanner">
-                <span>⊕</span>
-            </button>
-
-            <button class="tab-btn-app" onclick="switchAppTab(2, this)">
-                <span class="tab-icon-app">🫙</span>
-                <span>Harvest</span>
-            </button>
-            <button class="tab-btn-app" onclick="switchAppTab(3, this)">
-                <span class="tab-icon-app">🧮</span>
-                <span>Tools</span>
-            </button>
-        </div>
-
-        <div class="home-indicator-pill"></div>
-
-        <!-- MODAL: CLEANROOM VOICE CONSOLE -->
-        <div class="app-modal-overlay" id="modalVoice">
-            <div class="modal-sheet">
-                <div class="modal-drag-pill"></div>
-                <div class="modal-header">
-                    <h3>🎙️ Cleanroom Voice Console</h3>
-                    <button class="btn-modal-close" onclick="closeModal('voice')">✕</button>
-                </div>
-                <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
-                    Hands-free sterile observation input. Tap an intent to simulate:
-                </p>
-                <div class="voice-wave-container">
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                    <div class="wave-bar"></div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <button class="btn-batch-action" style="padding: 10px; text-align: left;" onclick="handleVoiceCmd('Trigger 15-minute ultrasonic mist cycle', '💧')">"Start 15-minute mist cycle"</button>
-                    <button class="btn-batch-action" style="padding: 10px; text-align: left;" onclick="handleVoiceCmd('Log harvest 340 grams Lion's Mane #04', '⚖️')">"Log harvest 340g Lion's Mane"</button>
-                    <button class="btn-batch-action" style="padding: 10px; text-align: left;" onclick="handleVoiceCmd('What is current VPD reading?', '💧')">"What is current chamber VPD?"</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- MODAL: AI & QR SCANNER -->
-        <div class="app-modal-overlay" id="modalScanner">
-            <div class="modal-sheet" style="text-align: center;">
-                <div class="modal-drag-pill"></div>
-                <div class="modal-header">
-                    <h3>📷 AI Vision & QR Scanner</h3>
-                    <button class="btn-modal-close" onclick="closeModal('scanner')">✕</button>
-                </div>
-                <div style="width: 200px; height: 200px; margin: 10px auto 20px; border: 2px dashed var(--accent-blue); border-radius: 20px; display: flex; align-items: center; justify-content: center; position: relative; background: #000;">
-                    <span style="font-size: 48px;">🔲</span>
-                    <div style="position: absolute; width: 100%; height: 2px; background: var(--accent-green); animation: scanLine 1.5s infinite alternate;"></div>
-                </div>
-                <style>@keyframes scanLine { from { top: 10px; } to { top: 190px; } }</style>
-                <button class="btn-batch-action" style="background: var(--accent-blue); color: #fff; padding: 10px 20px; font-weight: bold;" onclick="simulateQRScan()">Simulate QR Scan (Batch #04)</button>
-            </div>
-        </div>
-
-        <!-- MODAL: INFO & SETTINGS -->
-        <div class="app-modal-overlay" id="modalInfo">
-            <div class="modal-sheet">
-                <div class="modal-drag-pill"></div>
-                <div class="modal-header">
-                    <h3>⚙️ Sovereign Lab Settings</h3>
-                    <button class="btn-modal-close" onclick="closeModal('info')">✕</button>
-                </div>
-                <div style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
-                    <p style="margin-bottom: 10px;"><b style="color:#fff;">MycoLabs Smart Mycology OS</b> is 100% sovereign, local-first software. No accounts, zero analytics, zero data telemetry.</p>
-                    <p style="margin-bottom: 10px;"><b style="color:var(--accent-green);">● Hardware Hub:</b> Tuya LAN, MQTT, Home Assistant, ESP32, and Raspberry Pi.</p>
-                    <p style="margin-bottom: 14px;"><b style="color:var(--accent-blue);">● 24/7 WebRTC Node:</b> Encrypted point-to-point chamber camera stream.</p>
-                    <a href="https://github.com/BiomeCoreLabs/MycoLabs" target="_blank" rel="noopener" class="btn-batch-action" style="display:block; text-align:center; padding: 12px; background: var(--accent-green); color: #000; font-weight: bold; text-decoration: none; border-radius: 12px;">View on GitHub</a>
-                </div>
-            </div>
-        </div>
-
+      <div class="nav-label" style="margin-top:16px;">System & Voice</div>
+      <a class="nav-item" onclick="openVoiceModal()">
+        <span class="icon">🎙️</span>
+        <span>Cleanroom Voice</span>
+      </a>
+      <a class="nav-item" onclick="switchTab('settings')">
+        <span class="icon">⚙️</span>
+        <span>Settings & Hub</span>
+      </a>
     </div>
 
-    <!-- Interactive Script -->
-    <script>
-        function switchAppTab(index, el) {
-            document.querySelectorAll('.tab-btn-app').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
+    <div class="sidebar-footer">
+      <div class="lan-status-box">
+        <div class="status-dot"></div>
+        <div>
+          <strong style="color:#fff;">TUYA LOCAL HUB</strong>
+          <div style="font-size:10px;color:var(--accent-green);">192.168.1.185 • 0.4ms LAN</div>
+        </div>
+      </div>
+      <button class="btn-action" onclick="openVoiceModal()" style="width:100%;justify-content:center;background:rgba(0,255,170,0.1);color:var(--accent-green);border-color:rgba(0,255,170,0.3);">
+        🎙️ Cleanroom Voice Assistant
+      </button>
+    </div>
+  </aside>
 
-            document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
-            document.getElementById('tab' + index).classList.add('active');
-        }
+  <!-- Main Workspace -->
+  <main class="workspace">
+    <!-- Top Navigation Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="openMobileMenu()">☰</button>
+        <div class="location-crumb">
+          <span style="color:var(--text-muted);">BiomeCore Lab</span>
+          <span style="color:var(--text-dim);">/</span>
+          <span class="chamber-pill" id="crumb-chamber">CHAMBER 01 • AUTOMATED</span>
+        </div>
+      </div>
 
-        function switchDeviceShell(mode) {
-            const shell = document.getElementById('appDeviceShell');
-            const btnPhone = document.getElementById('btnModePhone');
-            const btnTablet = document.getElementById('btnModeTablet');
+      <div class="topbar-telemetry-strip">
+        <div class="telemetry-item">
+          <span>🌡️</span>
+          <span>Temp: <strong id="top-temp">21.5°C</strong></span>
+        </div>
+        <div class="telemetry-item">
+          <span>💧</span>
+          <span>RH: <strong id="top-rh">90.2%</strong></span>
+        </div>
+        <div class="telemetry-item">
+          <span>🫧</span>
+          <span>CO₂: <strong id="top-co2">740 PPM</strong></span>
+        </div>
+        <div class="vpd-badge-header" onclick="openVoiceModal()" title="Click to ask Cleanroom Assistant">
+          💧 VPD <span id="top-vpd">0.38</span> kPa • OPTIMAL
+        </div>
+      </div>
 
-            if (mode === 'tablet') {
-                shell.classList.add('mode-fullscreen');
-                btnTablet.classList.add('active');
-                btnPhone.classList.remove('active');
-            } else {
-                shell.classList.remove('mode-fullscreen');
-                btnPhone.classList.add('active');
-                btnTablet.classList.remove('active');
-            }
-        }
+      <div class="topbar-actions">
+        <button class="btn-action" onclick="openScannerModal()">
+          <span>📷</span> <span class="hide-mobile">Scan Tag</span>
+        </button>
+        <button class="btn-action btn-primary" onclick="openNewBatchModal()">
+          <span>+</span> <span>New Batch</span>
+        </button>
+      </div>
+    </header>
 
-        function selectLens(el) {
-            document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
-            el.classList.add('active');
-            showToast('📷 Camera Switched to ' + el.textContent + ' Optical Lens', '🔎');
-        }
+    <!-- App Views Content -->
+    <div class="view-content">
 
-        let actuatorsState = { Humid: true, Fan: false, Light: true };
-        function toggleAct(key, name, icon) {
-            actuatorsState[key] = !actuatorsState[key];
-            const card = document.getElementById('act' + key);
-            const pill = document.getElementById('pill' + key);
+      <!-- ================= 1. DASHBOARD TAB ================= -->
+      <section id="pane-dashboard" class="tab-pane active">
+        <!-- Top Telemetry Row -->
+        <div class="telemetry-cards-grid">
+          <div class="metric-card">
+            <span class="metric-label">Psychrometric VPD</span>
+            <div class="metric-val" style="color:var(--accent-green);"><span id="metric-vpd">0.38</span> <span class="metric-unit">kPa</span></div>
+            <span class="metric-sub">● Optimal Transpiration</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Core Temperature</span>
+            <div class="metric-val"><span id="metric-temp">21.5</span> <span class="metric-unit">°C</span></div>
+            <span class="metric-sub">● Target: 21.0 - 23.0°C</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Relative Humidity</span>
+            <div class="metric-val"><span id="metric-rh">90.2</span> <span class="metric-unit">%</span></div>
+            <span class="metric-sub">● Target: 88 - 94% RH</span>
+          </div>
+          <div class="metric-card">
+            <span class="metric-label">Carbon Dioxide (CO₂)</span>
+            <div class="metric-val"><span id="metric-co2">740</span> <span class="metric-unit">PPM</span></div>
+            <span class="metric-sub">● Fresh Air Exchange Active</span>
+          </div>
+        </div>
 
-            if (actuatorsState[key]) {
-                card.classList.add('active');
-                pill.className = 'act-status-pill on';
-                pill.textContent = key === 'Light' ? 'ON' : 'ACTIVE';
-                showToast(icon + ' ' + name + ' Turned ON', icon);
-            } else {
-                card.classList.remove('active');
-                pill.className = 'act-status-pill off';
-                pill.textContent = 'STANDBY';
-                showToast('⭕ ' + name + ' Turned OFF', '⭕');
-            }
-        }
+        <!-- Camera & Relays Row -->
+        <div class="dashboard-grid">
+          <!-- Camera Feed -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📹</span>
+                <span>Chamber 01 • Optical Feed</span>
+              </div>
+              <span class="card-tag">WebRTC 60FPS</span>
+            </div>
 
-        function openModal(id) {
-            const m = document.getElementById('modal' + id.charAt(0).toUpperCase() + id.slice(1));
-            if (m) m.classList.add('open');
-        }
+            <div class="camera-viewport">
+              <video id="chamber-video" src="assets/animycolab.mp4" autoplay loop muted playsinline></video>
+              <div class="camera-overlay">
+                <div class="live-badge"><div class="rec-dot"></div> LIVE REC</div>
+                <div class="fps-badge">1080p • 60 FPS • LAN</div>
+              </div>
+              <!-- AI Bounding Boxes -->
+              <div class="ai-boxes-overlay" id="ai-boxes">
+                <div class="ai-box" style="top:25%;left:28%;width:28%;height:32%;">
+                  <span class="ai-box-label">🦁 Primordia Cluster #1 (98.4%)</span>
+                </div>
+                <div class="ai-box" style="top:40%;right:15%;width:24%;height:28%;">
+                  <span class="ai-box-label">🍄 Active Pinhead (94.2%)</span>
+                </div>
+              </div>
+            </div>
 
-        function closeModal(id) {
-            const m = document.getElementById('modal' + id.charAt(0).toUpperCase() + id.slice(1));
-            if (m) m.classList.remove('open');
-        }
+            <div class="camera-controls">
+              <div class="lens-group">
+                <button class="lens-btn" onclick="setLens(0.5, this)">0.5x Ultra</button>
+                <button class="lens-btn active" onclick="setLens(1.0, this)">1.0x Main</button>
+                <button class="lens-btn" onclick="setLens(3.0, this)">3.0x Macro</button>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-action" id="ai-detector-btn" onclick="toggleAIDetector()" style="font-size:12px;">
+                  🤖 AI Pinhead Detector
+                </button>
+                <button class="btn-action" onclick="captureSnapshot()" style="font-size:12px;">
+                  📸 Snapshot
+                </button>
+              </div>
+            </div>
+          </div>
 
-        let toastTimeout;
-        function showToast(text, icon) {
-            const toast = document.getElementById('appToast');
-            document.getElementById('toastText').textContent = text;
-            document.getElementById('toastIcon').textContent = icon || 'ℹ️';
-            toast.classList.add('show');
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
-        }
+          <!-- Smart Device Quick Dock -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>⚡</span>
+                <span>Hardware Relays Quick Dock</span>
+              </div>
+              <span class="card-tag" id="total-power-tag">74W TOTAL</span>
+            </div>
 
-        function handleVoiceCmd(cmd, icon) {
-            closeModal('voice');
-            showToast('🎙️ Executing: "' + cmd + '"', icon);
-        }
+            <div class="relays-list">
+              <div class="relay-item active" id="relay-row-humidifier">
+                <div class="relay-meta">
+                  <div class="relay-icon">💧</div>
+                  <div class="relay-info">
+                    <h4>Ultrasonic Humidifier</h4>
+                    <span id="relay-humidifier-meta">Active • 32W • Auto VPD Duty</span>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="switch-humidifier" checked onchange="toggleRelay('humidifier', this.checked)">
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
 
-        function simulateQRScan() {
-            closeModal('scanner');
-            showToast('🔍 Scanned QR: Lion's Mane #04 (SKU: LM-AG-04)', '🍄');
-            switchAppTab(0, document.querySelectorAll('.tab-btn-app')[0]);
-        }
+              <div class="relay-item" id="relay-row-fan">
+                <div class="relay-meta">
+                  <div class="relay-icon">🌀</div>
+                  <div class="relay-info">
+                    <h4>FAE Duct Fan (Exhaust)</h4>
+                    <span id="relay-fan-meta">Standby • 0W • Interval Trigger</span>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="switch-fan" onchange="toggleRelay('fan', this.checked)">
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
 
-        function openBatchDetail(name) {
-            showToast('📋 Viewing Batch Dossier: ' + name, '🍄');
-        }
+              <div class="relay-item active" id="relay-row-light">
+                <div class="relay-meta">
+                  <div class="relay-icon">💡</div>
+                  <div class="relay-info">
+                    <h4>6500K Dual Grow LED</h4>
+                    <span id="relay-light-meta">Active • 24W • 12/12 Cycle</span>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="switch-light" checked onchange="toggleRelay('light', this.checked)">
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
 
-        function recalcCVG() {
-            const coir = parseFloat(document.getElementById('inputCoir').value) || 0;
-            const verm = Math.round(coir * 0.8);
-            const gyp = Math.round(coir * 0.12);
-            const water = ((coir * 5.2) / 1000).toFixed(1);
+              <div class="relay-item" id="relay-row-heater">
+                <div class="relay-meta">
+                  <div class="relay-icon">🔥</div>
+                  <div class="relay-info">
+                    <h4>Ceramic Substrate Heater</h4>
+                    <span id="relay-heater-meta">Standby • 0W • Thermostat Linked</span>
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="switch-heater" onchange="toggleRelay('heater', this.checked)">
+                  <span class="slider-toggle"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            document.getElementById('resVerm').textContent = verm + 'g';
-            document.getElementById('resGyp').textContent = gyp + 'g';
-            document.getElementById('resWater').textContent = water + 'L';
-        }
+        <!-- Active Cultivation Batches Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+          <div>
+            <h3 style="font-size:18px;font-weight:800;letter-spacing:-0.3px;">Active Cultivation Batches</h3>
+            <p style="font-size:13px;color:var(--text-muted);">Real-time colonization dials, fruiting chamber assignments, and harvest tracking.</p>
+          </div>
+          <button class="btn-action btn-primary" onclick="openNewBatchModal()">+ Inoculate Batch</button>
+        </div>
 
-        function recalcBE() {
-            const y = parseFloat(document.getElementById('inputYield').value) || 0;
-            const s = parseFloat(document.getElementById('inputSpawn').value) || 1;
-            const be = ((y / s) * 100).toFixed(1);
-            document.getElementById('resBE').textContent = be + '%';
-        }
-    </script>
+        <!-- Batches Grid Container -->
+        <div class="batches-grid" id="batches-container">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </section>
+
+      <!-- ================= 2. GENETICS LAB TAB ================= -->
+      <section id="pane-genetics" class="tab-pane">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 style="font-size:22px;font-weight:800;letter-spacing:-0.5px;">🧬 Genetics & Culture Vault</h2>
+            <p style="font-size:13px;color:var(--text-muted);">Isolations, multi-spore germinations, sectoring records, and liquid cultures.</p>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div class="lens-group">
+              <button class="lens-btn active" onclick="filterGenetics('all', this)">All (4)</button>
+              <button class="lens-btn" onclick="filterGenetics('agar', this)">Agar Plates</button>
+              <button class="lens-btn" onclick="filterGenetics('lc', this)">Liquid Culture</button>
+              <button class="lens-btn" onclick="filterGenetics('spore', this)">Spore Prints</button>
+            </div>
+            <button class="btn-action btn-primary" onclick="openNewCultureModal()">+ New Transfer</button>
+          </div>
+        </div>
+
+        <div class="batches-grid" id="genetics-container">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </section>
+
+      <!-- ================= 3. STASH & VAULT TAB ================= -->
+      <section id="pane-stash" class="tab-pane">
+        <!-- Vault Header Banner -->
+        <div class="card" style="margin-bottom:24px;background:linear-gradient(135deg,rgba(0,255,170,0.1),rgba(0,229,255,0.06),rgba(15,23,38,0.8));border-color:rgba(0,255,170,0.3);">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;">
+            <div>
+              <span class="card-tag">SECURE AIR-TIGHT STORAGE VAULT</span>
+              <h2 style="font-size:32px;font-weight:900;letter-spacing:-0.8px;margin-top:4px;">
+                <span id="vault-total-g">1,480</span> <span style="font-size:18px;color:var(--accent-green);font-weight:700;">Grams Dried Harvest</span>
+              </h2>
+              <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">Average moisture content: <strong>7.1%</strong> • Silica Gel packs active • Zero mold events</p>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <button class="btn-action" onclick="printQRModal('VAULT-ALL')">🖨️ Print Batch Labels</button>
+              <button class="btn-action btn-primary" onclick="openNewHarvestModal()">+ Record Harvest</button>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="font-size:18px;font-weight:800;margin-bottom:16px;">Glass Curing Jars (Vacuum Sealed)</h3>
+        <div class="batches-grid" id="jars-container">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </section>
+
+      <!-- ================= 4. TOOLS & PRESETS TAB ================= -->
+      <section id="pane-tools" class="tab-pane">
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">🧮 Mycology Lab Calculations & Prep</h2>
+
+        <div class="dashboard-grid">
+          <!-- CVG Substrate Scaler -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>🥥</span>
+                <span>CVG Substrate Scaler (Field Capacity)</span>
+              </div>
+              <span class="card-tag">Standard Formula</span>
+            </div>
+
+            <div class="form-group">
+              <label>Dry Coco Coir Weight: <strong id="coir-weight-display" style="color:var(--accent-green);">650g (1 standard brick)</strong></label>
+              <input type="range" class="form-input" id="coir-slider" min="200" max="2600" step="50" value="650" oninput="calculateCVG(this.value)">
+            </div>
+
+            <div style="background:rgba(0,0,0,0.35);border:1px solid var(--border-subtle);border-radius:var(--radius-md);padding:16px;display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:14px;">
+                <span>Vermiculite (Medium Grade):</span>
+                <strong id="cvg-verm" style="color:#fff;">240 g (~8 cups)</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:14px;">
+                <span>Gypsum (Calcium Sulfate):</span>
+                <strong id="cvg-gypsum" style="color:#fff;">75 g (~1/2 cup)</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:14px;border-top:1px solid var(--border-subtle);padding-top:10px;">
+                <span style="color:var(--accent-cyan);font-weight:700;">Boiling Water Required:</span>
+                <strong id="cvg-water" style="color:var(--accent-cyan);font-weight:800;font-size:16px;">3.25 Liters</strong>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:8px;">
+              <span>💧 Squeeze Test:</span>
+              <strong style="color:var(--accent-green);">Field Capacity verified (1-2 drops upon firm squeeze)</strong>
+            </div>
+          </div>
+
+          <!-- BE% Calculator & Sterilize Timer -->
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <!-- BE% -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>⚖️</span>
+                  <span>Biological Efficiency (BE%) Calculator</span>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">DRY SUBSTRATE (g)</label>
+                  <input type="number" id="be-sub-input" class="form-input" value="1000" oninput="calcBE()">
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px;">FRESH MUSHROOMS (g)</label>
+                  <input type="number" id="be-yield-input" class="form-input" value="1250" oninput="calcBE()">
+                </div>
+              </div>
+              <div style="padding:12px;background:rgba(0,255,170,0.08);border:1px solid rgba(0,255,170,0.25);border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:700;">Biological Efficiency:</span>
+                <strong id="be-result" style="font-size:20px;color:var(--accent-green);font-weight:900;">125.0%</strong>
+              </div>
+              <span id="be-rating" style="font-size:11px;color:var(--accent-green);margin-top:6px;display:block;text-align:right;">★ Commercial Elite Standard</span>
+            </div>
+
+            <!-- Pressure Cooker Timer -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>⏱️</span>
+                  <span>15 PSI Sterilization Timer</span>
+                </div>
+                <span class="card-tag" id="timer-cycle-tag">GRAIN CYCLE (90 MIN)</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:36px;font-family:monospace;font-weight:900;color:#fff;" id="timer-display">90:00</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn-action btn-primary" id="timer-toggle-btn" onclick="toggleTimer()">Start Timer</button>
+                  <button class="btn-action" onclick="resetTimer()">Reset</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. CAMERA FULL VIEW TAB ================= -->
+      <section id="pane-camera" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>📹</span>
+              <span>Chamber 01 • Fullscreen Optics & Telemetry HUD</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-action" onclick="switchTab('dashboard')">← Back to Dashboard</button>
+              <button class="btn-action btn-primary" onclick="captureSnapshot()">📸 Shutter Snap</button>
+            </div>
+          </div>
+
+          <div class="camera-viewport" style="max-height:68vh;aspect-ratio:16/9;">
+            <video src="assets/animycolab.mp4" autoplay loop muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+            <div class="camera-overlay">
+              <div class="live-badge"><div class="rec-dot"></div> LIVE STREAMING 24/7</div>
+              <div class="fps-badge">H.264 • LOCAL LAN • LOW LATENCY</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 6. SETTINGS TAB ================= -->
+      <section id="pane-settings" class="tab-pane">
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">⚙️ Laboratory Station Settings & Integrations</h2>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;">
+          <div class="card">
+            <div class="card-header"><div class="card-title">🔌 Tuya Local Gateway</div></div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Direct local socket connection without cloud servers.</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:rgba(0,0,0,0.3);border-radius:var(--radius-md);margin-bottom:12px;">
+              <span>Gateway IP:</span> <strong style="font-family:monospace;color:var(--accent-green);">192.168.1.185</strong>
+            </div>
+            <button class="btn-action" onclick="testHubConnection()" style="width:100%;justify-content:center;">Test Ping Gateway</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">🔒 Decoy Biometric Vault</div></div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Dual PIN authentication. Decoy PIN reveals only common culinary oyster mushrooms.</p>
+            <button class="btn-action" onclick="triggerDecoyTest()" style="width:100%;justify-content:center;">Simulate Decoy Trigger</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">🔄 Factory Demo Reset</div></div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Reset all simulated batches, relays, and logs back to default state.</p>
+            <button class="btn-action" onclick="resetDemoState()" style="width:100%;justify-content:center;color:var(--accent-red);border-color:rgba(255,82,82,0.3);">
+              Reset All Interactive Data
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-item active" id="bnav-dashboard" onclick="switchTab('dashboard')">
+    <span class="icon">📊</span>
+    <span>Dashboard</span>
+  </div>
+  <div class="bottom-nav-item" id="bnav-genetics" onclick="switchTab('genetics')">
+    <span class="icon">🧬</span>
+    <span>Genetics</span>
+  </div>
+  <div class="floating-center-btn" onclick="openScannerModal()" title="Quick Scan">
+    📷
+  </div>
+  <div class="bottom-nav-item" id="bnav-stash" onclick="switchTab('stash')">
+    <span class="icon">🫙</span>
+    <span>Stash</span>
+  </div>
+  <div class="bottom-nav-item" id="bnav-tools" onclick="switchTab('tools')">
+    <span class="icon">🧮</span>
+    <span>Tools</span>
+  </div>
+</nav>
+
+<!-- Modals -->
+<!-- 1. New Batch Modal -->
+<div class="modal-overlay" id="modal-new-batch">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <div class="modal-title"><span>🌱</span> Inoculate New Cultivation Batch</div>
+    <form onsubmit="handleNewBatchSubmit(event)">
+      <div class="form-group">
+        <label>Species / Strain Isolation</label>
+        <select id="nb-strain" class="form-select">
+          <option value="Lion's Mane (Hericium erinaceus)">Lion's Mane (Hericium erinaceus)</option>
+          <option value="Blue Oyster (Pleurotus ostreatus)">Blue Oyster (Pleurotus ostreatus)</option>
+          <option value="Golden Teacher (P. cubensis)">Golden Teacher (P. cubensis)</option>
+          <option value="Enoki Winter White (Flammulina)">Enoki Winter White (Flammulina)</option>
+          <option value="King Trumpet (Pleurotus eryngii)">King Trumpet (Pleurotus eryngii)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Substrate Formulation</label>
+        <select id="nb-substrate" class="form-select">
+          <option value="Hardwood Sawdust + Wheat Bran">Hardwood Sawdust + 20% Wheat Bran</option>
+          <option value="CVG (Coco Coir, Vermiculite, Gypsum)">CVG (Coco Coir, Vermiculite, Gypsum)</option>
+          <option value="Master's Mix (50/50 Hardwood/Soy)">Master's Mix (50/50 Hardwood/Soy)</option>
+          <option value="Hydrated Straw">Pasteurized Straw</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Container / Vessel Type</label>
+        <select id="nb-vessel" class="form-select">
+          <option value="5lb Unicorn 0.2µm Filter Bag">5lb Unicorn 0.2µm Filter Bag</option>
+          <option value="66-Quart Monotub (Microppose)">66-Quart Monotub (Microppose)</option>
+          <option value="1-Quart Mason Grain Jar">1-Quart Mason Grain Jar</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-action" onclick="closeModals()">Cancel</button>
+        <button type="submit" class="btn-action btn-primary">Inoculate & Register</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 2. Cleanroom Voice Console Modal -->
+<div class="modal-overlay" id="modal-voice">
+  <div class="modal-card" style="text-align:center;">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <div style="font-size:36px;margin-bottom:8px;">🎙️</div>
+    <div class="modal-title" style="justify-content:center;">Cleanroom Voice Console</div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Hands-free sterile assistant. Trigger queries or relay changes without touching screens.</p>
+
+    <!-- Waveform Visualizer -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;height:48px;margin-bottom:20px;" id="waveform-box">
+      <div style="width:4px;height:24px;background:var(--accent-green);border-radius:2px;animation:waveAnim 1s infinite alternate 0.1s;"></div>
+      <div style="width:4px;height:38px;background:var(--accent-green);border-radius:2px;animation:waveAnim 1s infinite alternate 0.3s;"></div>
+      <div style="width:4px;height:48px;background:var(--accent-cyan);border-radius:2px;animation:waveAnim 1s infinite alternate 0.2s;"></div>
+      <div style="width:4px;height:32px;background:var(--accent-green);border-radius:2px;animation:waveAnim 1s infinite alternate 0.4s;"></div>
+      <div style="width:4px;height:18px;background:var(--accent-green);border-radius:2px;animation:waveAnim 1s infinite alternate 0.5s;"></div>
+    </div>
+    <style>@keyframes waveAnim { 0% { height: 10px; } 100% { height: 44px; } }</style>
+
+    <!-- Console Output Bubble -->
+    <div id="voice-response-bubble" style="background:rgba(0,0,0,0.4);border:1px solid var(--border-glass);padding:14px;border-radius:var(--radius-md);font-size:14px;color:#fff;min-height:56px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+      "Listening for cleanroom commands..."
+    </div>
+
+    <!-- Quick Voice Intent Chips -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+      <button class="btn-action" onclick="executeVoiceIntent('status')">"Status Report"</button>
+      <button class="btn-action" onclick="executeVoiceIntent('humidifier')">"Turn on Humidifier"</button>
+      <button class="btn-action" onclick="executeVoiceIntent('vpd')">"Check Current VPD"</button>
+      <button class="btn-action" onclick="executeVoiceIntent('harvest')">"Report Stash Totals"</button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Scanner Modal -->
+<div class="modal-overlay" id="modal-scanner">
+  <div class="modal-card" style="text-align:center;">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <div class="modal-title" style="justify-content:center;">📷 Batch Reticle & QR Vision</div>
+    <div style="position:relative;width:240px;height:240px;margin:0 auto 20px;border:2px dashed var(--accent-green);border-radius:20px;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;left:0;right:0;height:2px;background:var(--accent-green);box-shadow:0 0 12px var(--accent-green);animation:scanLine 2s infinite ease-in-out;"></div>
+      <style>@keyframes scanLine { 0% { top: 0; } 100% { top: 100%; } }</style>
+      <span style="font-size:48px;opacity:0.3;">🏷️</span>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Align QR label within the scanning reticle.</p>
+    <button class="btn-action btn-primary" onclick="simulateQRScan('LM-04')" style="width:100%;justify-content:center;">
+      ⚡ Simulate Tag Recognition (LM-04)
+    </button>
+  </div>
+</div>
+
+<!-- 4. Batch Detail Modal -->
+<div class="modal-overlay" id="modal-batch-detail">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <div class="modal-title"><span id="md-strain-icon">🍄</span> <span id="md-strain-title">Batch Details</span></div>
+    <div style="font-family:monospace;color:var(--accent-green);font-size:12px;margin-bottom:16px;" id="md-batch-code">BATCH-00</div>
+
+    <div class="form-group">
+      <label>Colonization Progress: <strong id="md-progress-label" style="color:var(--accent-green);">84%</strong></label>
+      <input type="range" class="form-input" id="md-progress-slider" min="0" max="100" oninput="updateBatchProgress(this.value)">
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;background:rgba(0,0,0,0.3);padding:14px;border-radius:var(--radius-md);margin-bottom:20px;">
+      <div>Substrate: <strong id="md-substrate" style="color:#fff;">Hardwood</strong></div>
+      <div>Vessel: <strong id="md-vessel" style="color:#fff;">Filter Bag</strong></div>
+      <div>Stage: <strong id="md-stage" style="color:var(--accent-cyan);">Fruiting</strong></div>
+    </div>
+
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn-action" style="color:var(--accent-red);border-color:rgba(255,82,82,0.3);" onclick="deleteCurrentBatch()">Delete Batch</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-action" onclick="advanceBatchStage()">Advance Stage</button>
+        <button class="btn-action btn-primary" onclick="harvestCurrentBatch()">Harvest Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. Printable QR Modal -->
+<div class="modal-overlay" id="modal-qr-print">
+  <div class="modal-card" style="text-align:center;">
+    <button class="modal-close" onclick="closeModals()">✕</button>
+    <div class="modal-title" style="justify-content:center;">🖨️ Thermal AirPrint QR Tag</div>
+    <div style="background:#fff;color:#000;padding:24px;border-radius:12px;display:inline-block;margin:16px auto;">
+      <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px;">MYCOLABS BIO-TAG</div>
+      <div style="font-size:48px;margin:8px 0;">▦</div>
+      <div style="font-family:monospace;font-weight:800;font-size:14px;" id="qr-code-text">LM-2026-04</div>
+      <div style="font-size:10px;margin-top:4px;">AIR-PRINT READY • 58MM THERMAL</div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Ready for direct broadcast to Brother QL-820NWB or Apple AirPrint printers.</p>
+    <button class="btn-action btn-primary" onclick="showToast('AirPrint spooler dispatched to thermal printer!');closeModals();" style="width:100%;justify-content:center;">
+      Send to AirPrint Printer
+    </button>
+  </div>
+</div>
+
+<script>
+// --- State Management ---
+const defaultState = {
+  currentTab: 'dashboard',
+  relays: {
+    humidifier: { active: true, watts: 32 },
+    fan: { active: false, watts: 18 },
+    light: { active: true, watts: 24 },
+    heater: { active: false, watts: 45 }
+  },
+  batches: [
+    { id: 'LM-04', strain: "Lion's Mane (H. erinaceus)", code: "BATCH-LM-04", stage: "Primordia Forming", progress: 84, substrate: "Hardwood Sawdust + Bran", vessel: "5lb Filter Patch Bag", days: 14 },
+    { id: 'BO-07', strain: "Blue Oyster (P. ostreatus)", code: "BATCH-BO-07", stage: "Ready for Harvest", progress: 96, substrate: "Master's Mix", vessel: "5lb Filter Patch Bag", days: 11 },
+    { id: 'GT-12', strain: "Golden Teacher (P. cubensis)", code: "BATCH-GT-12", stage: "Colonizing Substrate", progress: 62, substrate: "Whole Oats -> CVG", vessel: "66qt Monotub", days: 9 }
+  ],
+  genetics: [
+    { id: 'g1', strain: "Lion's Mane P2", type: 'agar', desc: "MEA + Yeast • Aggressive rhizomorphic tomentose isolate", gen: "P2 Isolation", date: "2026-03-24" },
+    { id: 'g2', strain: "Blue Oyster LC", type: 'lc', desc: "Liquid culture mycelial density optimal in 4% honey broth", gen: "LC Syringe #4", date: "2026-03-18" },
+    { id: 'g3', strain: "Golden Teacher Foil Print", type: 'spore', desc: "Heavy dense spore deposit for multi-spore germinations", gen: "F1 Spore Print", date: "2026-03-10" },
+    { id: 'g4', strain: "Enoki White P1", type: 'agar', desc: "Cold-tolerant selection on Malt Extract Agar", gen: "P1 Clean Sector", date: "2026-03-22" }
+  ],
+  jars: [
+    { id: 'j1', strain: "Lion's Mane Dried", grams: 420, moisture: 7.2, flushes: 3, date: "2026-03-20" },
+    { id: 'j2', strain: "Blue Oyster Slices", grams: 680, moisture: 6.8, flushes: 2, date: "2026-03-22" },
+    { id: 'j3', strain: "Enoki Dried Flakes", grams: 380, moisture: 7.4, flushes: 2, date: "2026-03-19" }
+  ],
+  activeBatchId: null
+};
+
+// Load or Initialize AppState
+let AppState = JSON.parse(localStorage.getItem('mycolabs_state') || 'null');
+if (!AppState) {
+  AppState = defaultState;
+  saveState();
+}
+
+function saveState() {
+  localStorage.setItem('mycolabs_state', JSON.stringify(AppState));
+}
+
+// Audio Feedback (Web Audio API)
+const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+function playBeep(freq = 600, duration = 0.08) {
+  if (!audioCtx) return;
+  try {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+// Toast
+let toastTimeout;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  const txt = document.getElementById('toast-text');
+  txt.innerText = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// Navigation Tab Switching
+function switchTab(tabId) {
+  playBeep(880, 0.05);
+  AppState.currentTab = tabId;
+  saveState();
+
+  // Desktop sidebar
+  document.querySelectorAll('.sidebar .nav-item').forEach(el => el.classList.remove('active'));
+  // Panes
+  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+  // Mobile bottom nav
+  document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+
+  const pane = document.getElementById('pane-' + tabId);
+  if (pane) pane.classList.add('active');
+
+  const bnav = document.getElementById('bnav-' + tabId);
+  if (bnav) bnav.classList.add('active');
+
+  // Breadcrumb text
+  const crumb = document.getElementById('crumb-chamber');
+  if (crumb) {
+    if (tabId === 'dashboard') crumb.innerText = 'CHAMBER 01 • AUTOMATED';
+    else if (tabId === 'genetics') crumb.innerText = 'GENETICS & ISOLATIONS';
+    else if (tabId === 'stash') crumb.innerText = 'STASH & INVENTORY VAULT';
+    else if (tabId === 'tools') crumb.innerText = 'TOOLS & CVG CALCULATORS';
+    else if (tabId === 'camera') crumb.innerText = 'CHAMBER 01 OPTICAL HUD';
+    else if (tabId === 'settings') crumb.innerText = 'SYSTEM CONFIG & LOCAL LAN';
+  }
+}
+
+// Smart Relays Toggle
+function toggleRelay(key, active) {
+  playBeep(active ? 750 : 350, 0.1);
+  AppState.relays[key].active = active;
+  saveState();
+
+  const row = document.getElementById(`relay-row-${key}`);
+  const meta = document.getElementById(`relay-humidifier-meta`);
+
+  if (active) row.classList.add('active');
+  else row.classList.remove('active');
+
+  updateTotalPower();
+  showToast(`${key.toUpperCase()} relay turned ${active ? 'ON' : 'OFF'}`);
+}
+
+function updateTotalPower() {
+  let total = 0;
+  for (const [k, v] of Object.entries(AppState.relays)) {
+    if (v.active) total += v.watts;
+  }
+  document.getElementById('total-power-tag').innerText = `${total}W TOTAL`;
+}
+
+// Camera Controls
+let currentLens = 1.0;
+function setLens(scale, btn) {
+  playBeep(900, 0.04);
+  currentLens = scale;
+  document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const video = document.getElementById('chamber-video');
+  if (video) video.style.transform = `scale(${scale})`;
+  showToast(`Optical Zoom adjusted to ${scale}x`);
+}
+
+function toggleAIDetector() {
+  playBeep(640, 0.08);
+  const boxes = document.getElementById('ai-boxes');
+  const btn = document.getElementById('ai-detector-btn');
+  const active = boxes.classList.toggle('active');
+  if (active) {
+    btn.style.borderColor = 'var(--accent-green)';
+    btn.style.color = 'var(--accent-green)';
+    showToast('AI Pinhead Vision: 2 clusters localized (98.4% confidence)');
+  } else {
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    showToast('AI Detection Overlay disabled');
+  }
+}
+
+function captureSnapshot() {
+  playBeep(1200, 0.15);
+  // Flash effect
+  const flash = document.createElement('div');
+  flash.style.position = 'fixed';
+  flash.style.inset = '0';
+  flash.style.background = '#fff';
+  flash.style.zIndex = '9999';
+  flash.style.opacity = '0.85';
+  flash.style.transition = 'opacity 0.25s ease';
+  document.body.appendChild(flash);
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 250);
+  }, 50);
+
+  showToast('📸 Snapshot captured to Camera Roll / Chamber 01 Log');
+}
+
+// Batches Rendering
+function renderBatches() {
+  const container = document.getElementById('batches-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const badge = document.getElementById('nav-badge-batches');
+  if (badge) badge.innerText = AppState.batches.length;
+
+  AppState.batches.forEach(b => {
+    const radius = 24;
+    const circ = 2 * Math.PI * radius;
+    const offset = circ - (b.progress / 100) * circ;
+
+    const div = document.createElement('div');
+    div.className = 'batch-card';
+    div.onclick = (e) => {
+      if (e.target.tagName !== 'BUTTON') openBatchDetail(b.id);
+    };
+
+    div.innerHTML = `
+      <div class="batch-top">
+        <div>
+          <div class="batch-strain">${b.strain}</div>
+          <div class="batch-code">${b.code}</div>
+        </div>
+        <div class="batch-stage-badge">${b.stage}</div>
+      </div>
+      <div class="batch-progress-row">
+        <div class="progress-circle-wrap">
+          <svg viewBox="0 0 60 60">
+            <circle class="progress-circle-bg" cx="30" cy="30" r="${radius}"></circle>
+            <circle class="progress-circle-val" cx="30" cy="30" r="${radius}" style="stroke-dasharray: ${circ}; stroke-dashoffset: ${offset};"></circle>
+          </svg>
+          <div class="progress-text">${b.progress}%</div>
+        </div>
+        <div class="batch-details-list">
+          <div>Substrate: <strong>${b.substrate}</strong></div>
+          <div>Vessel: <strong>${b.vessel}</strong></div>
+          <div>Inoculation: <strong>Day ${b.days}</strong></div>
+        </div>
+      </div>
+      <div class="batch-actions-row">
+        <button class="batch-btn" onclick="openBatchDetail('${b.id}')">Inspect</button>
+        <button class="batch-btn harvest-btn" onclick="quickHarvest('${b.id}')">Harvest</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// Batch Modals & Actions
+function openNewBatchModal() {
+  playBeep(700, 0.05);
+  document.getElementById('modal-new-batch').classList.add('active');
+}
+
+function handleNewBatchSubmit(e) {
+  e.preventDefault();
+  playBeep(920, 0.1);
+  const strain = document.getElementById('nb-strain').value;
+  const substrate = document.getElementById('nb-substrate').value;
+  const vessel = document.getElementById('nb-vessel').value;
+  const code = 'BATCH-' + Math.floor(100 + Math.random() * 900);
+
+  const newBatch = {
+    id: 'b-' + Date.now(),
+    strain: strain,
+    code: code,
+    stage: "Inoculated (Day 1)",
+    progress: 5,
+    substrate: substrate,
+    vessel: vessel,
+    days: 1
+  };
+
+  AppState.batches.unshift(newBatch);
+  saveState();
+  renderBatches();
+  closeModals();
+  showToast(`Inoculation Registered: ${strain}`);
+}
+
+function openBatchDetail(id) {
+  playBeep(700, 0.04);
+  AppState.activeBatchId = id;
+  const b = AppState.batches.find(x => x.id === id);
+  if (!b) return;
+
+  document.getElementById('md-strain-title').innerText = b.strain;
+  document.getElementById('md-batch-code').innerText = b.code;
+  document.getElementById('md-substrate').innerText = b.substrate;
+  document.getElementById('md-vessel').innerText = b.vessel;
+  document.getElementById('md-stage').innerText = b.stage;
+  document.getElementById('md-progress-label').innerText = b.progress + '%';
+  document.getElementById('md-progress-slider').value = b.progress;
+
+  document.getElementById('modal-batch-detail').classList.add('active');
+}
+
+function updateBatchProgress(val) {
+  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
+  if (!b) return;
+  b.progress = parseInt(val);
+  document.getElementById('md-progress-label').innerText = val + '%';
+  saveState();
+  renderBatches();
+}
+
+function advanceBatchStage() {
+  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
+  if (!b) return;
+  if (b.stage.includes('Inoculated')) b.stage = 'Colonizing Substrate';
+  else if (b.stage.includes('Colonizing')) b.stage = 'Primordia Forming';
+  else if (b.stage.includes('Primordia')) b.stage = 'Ready for Harvest';
+  else b.stage = 'Flush Complete';
+
+  document.getElementById('md-stage').innerText = b.stage;
+  saveState();
+  renderBatches();
+  showToast(`Advanced stage to: ${b.stage}`);
+}
+
+function harvestCurrentBatch() {
+  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
+  if (!b) return;
+  const dryYield = Math.floor(120 + Math.random() * 180);
+  AppState.jars.unshift({
+    id: 'j-' + Date.now(),
+    strain: b.strain.split('(')[0].trim() + ' Dried',
+    grams: dryYield,
+    moisture: 7.0,
+    flushes: 1,
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  // Remove or complete batch
+  AppState.batches = AppState.batches.filter(x => x.id !== b.id);
+  saveState();
+  renderBatches();
+  renderJars();
+  closeModals();
+  showToast(`Harvested ${dryYield}g dried mushrooms into Vault!`);
+}
+
+function quickHarvest(id) {
+  AppState.activeBatchId = id;
+  harvestCurrentBatch();
+}
+
+function deleteCurrentBatch() {
+  AppState.batches = AppState.batches.filter(x => x.id !== AppState.activeBatchId);
+  saveState();
+  renderBatches();
+  closeModals();
+  showToast('Batch removed from cultivation station.');
+}
+
+// Genetics Tab
+function renderGenetics(filter = 'all') {
+  const container = document.getElementById('genetics-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const list = filter === 'all' ? AppState.genetics : AppState.genetics.filter(g => g.type === filter);
+
+  list.forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'batch-card';
+    card.innerHTML = `
+      <div class="batch-top">
+        <div>
+          <div class="batch-strain">${g.strain}</div>
+          <div class="batch-code">${g.gen} • ${g.date}</div>
+        </div>
+        <div class="batch-stage-badge" style="text-transform:uppercase;">${g.type}</div>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin:12px 0;">${g.desc}</p>
+      <div class="batch-actions-row">
+        <button class="batch-btn" onclick="showToast('Isolate ${g.strain} queued for transfer')">Subculture</button>
+        <button class="batch-btn harvest-btn" onclick="printQRModal('${g.strain}')">Print Tag</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function filterGenetics(type, btn) {
+  playBeep(800, 0.04);
+  document.querySelectorAll('#pane-genetics .lens-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGenetics(type);
+}
+
+function openNewCultureModal() {
+  const name = prompt("Enter Culture / Strain Name:", "Lion's Mane P3 Aggressive");
+  if (!name) return;
+  AppState.genetics.unshift({
+    id: 'g-' + Date.now(),
+    strain: name,
+    type: 'agar',
+    desc: 'New agar sector transfer on MEA. Sterile laminar flow hood protocol.',
+    gen: 'P3 Transfer',
+    date: new Date().toISOString().split('T')[0]
+  });
+  saveState();
+  renderGenetics();
+  showToast(`Logged culture transfer: ${name}`);
+}
+
+// Stash & Stock Jars
+function renderJars() {
+  const container = document.getElementById('jars-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  let totalG = 0;
+  AppState.jars.forEach(j => {
+    totalG += j.grams;
+    const card = document.createElement('div');
+    card.className = 'batch-card';
+    card.innerHTML = `
+      <div class="batch-top">
+        <div>
+          <div class="batch-strain">${j.strain}</div>
+          <div class="batch-code">CURING JAR #${j.id.toUpperCase()}</div>
+        </div>
+        <div class="batch-stage-badge">${j.grams}g DRY</div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin:8px 0;">
+        Moisture: <strong>${j.moisture}%</strong> • Flushes Recorded: <strong>${j.flushes}</strong><br>
+        Pack Date: <strong>${j.date}</strong>
+      </div>
+      <div class="batch-actions-row">
+        <button class="batch-btn" onclick="adjustJar('${j.id}', -10)">-10g Use</button>
+        <button class="batch-btn" onclick="adjustJar('${j.id}', 50)">+50g Flush</button>
+        <button class="batch-btn harvest-btn" onclick="printQRModal('${j.strain}')">QR Tag</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  document.getElementById('vault-total-g').innerText = totalG.toLocaleString();
+  const stashBadge = document.getElementById('nav-badge-stash');
+  if (stashBadge) stashBadge.innerText = (totalG / 1000).toFixed(2) + 'kg';
+}
+
+function adjustJar(id, delta) {
+  playBeep(delta > 0 ? 800 : 400, 0.05);
+  const j = AppState.jars.find(x => x.id === id);
+  if (!j) return;
+  j.grams = Math.max(0, j.grams + delta);
+  saveState();
+  renderJars();
+  showToast(`Jar ${j.strain} updated: ${j.grams}g`);
+}
+
+function openNewHarvestModal() {
+  const grams = prompt("Enter Fresh Wet Harvest Weight (grams):", "1200");
+  if (!grams) return;
+  const dryGrams = Math.round(parseInt(grams) * 0.09);
+  AppState.jars.unshift({
+    id: 'j-' + Date.now(),
+    strain: "Fresh Harvest Dried",
+    grams: dryGrams,
+    moisture: 7.0,
+    flushes: 1,
+    date: new Date().toISOString().split('T')[0]
+  });
+  saveState();
+  renderJars();
+  showToast(`Logged harvest: ${grams}g wet -> ${dryGrams}g dried in vault!`);
+}
+
+// Calculators
+function calculateCVG(coir) {
+  document.getElementById('coir-weight-display').innerText = `${coir}g (${(coir / 650).toFixed(1)} standard bricks)`;
+  const ratio = coir / 650;
+  const verm = Math.round(240 * ratio);
+  const gypsum = Math.round(75 * ratio);
+  const water = (3.25 * ratio).toFixed(2);
+
+  document.getElementById('cvg-verm').innerText = `${verm} g (~${Math.round(8 * ratio)} cups)`;
+  document.getElementById('cvg-gypsum').innerText = `${gypsum} g (~${(0.5 * ratio).toFixed(1)} cups)`;
+  document.getElementById('cvg-water').innerText = `${water} Liters`;
+}
+
+function calcBE() {
+  const sub = parseFloat(document.getElementById('be-sub-input').value) || 1;
+  const yld = parseFloat(document.getElementById('be-yield-input').value) || 0;
+  const be = ((yld / sub) * 100).toFixed(1);
+
+  document.getElementById('be-result').innerText = be + '%';
+  const rating = document.getElementById('be-rating');
+  if (be > 100) rating.innerText = '★ Commercial Elite Standard';
+  else if (be > 75) rating.innerText = '★ High Yield Harvest';
+  else rating.innerText = '● Standard Biological Efficiency';
+}
+
+// Timer
+let timerInterval = null;
+let timerSeconds = 90 * 60;
+function toggleTimer() {
+  playBeep(880, 0.08);
+  const btn = document.getElementById('timer-toggle-btn');
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    btn.innerText = 'Resume Timer';
+    showToast('Sterilization timer paused');
+  } else {
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        playBeep(1200, 0.5);
+        showToast('⏰ 15 PSI Sterilization Cycle Completed!');
+      }
+      updateTimerDisplay();
+    }, 1000);
+    btn.innerText = 'Pause Timer';
+    showToast('Sterilization countdown active');
+  }
+}
+
+function resetTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  timerSeconds = 90 * 60;
+  document.getElementById('timer-toggle-btn').innerText = 'Start Timer';
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  const mins = Math.floor(timerSeconds / 60);
+  const secs = timerSeconds % 60;
+  document.getElementById('timer-display').innerText = 
+    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Cleanroom Voice Assistant
+function openVoiceModal() {
+  playBeep(880, 0.06);
+  document.getElementById('modal-voice').classList.add('active');
+}
+
+function executeVoiceIntent(intent) {
+  playBeep(1000, 0.08);
+  const bubble = document.getElementById('voice-response-bubble');
+  let responseText = "";
+
+  if (intent === 'status') {
+    responseText = "Chamber 01 status nominal: Temperature 21.5°C, Humidity 90.2%, VPD 0.38 kPa, CO2 740 PPM.";
+  } else if (intent === 'humidifier') {
+    toggleRelay('humidifier', true);
+    document.getElementById('switch-humidifier').checked = true;
+    responseText = "Humidifier ultrasonic cycle engaged. Maintaining 90% relative humidity target.";
+  } else if (intent === 'vpd') {
+    responseText = "Current Vapor Pressure Deficit is 0.38 kilopascals. Optimum range for active primordia pinheads.";
+  } else if (intent === 'harvest') {
+    const total = AppState.jars.reduce((acc, x) => acc + x.grams, 0);
+    responseText = `Total vault inventory stands at ${total} grams dried mushrooms across ${AppState.jars.length} sealed jars.`;
+  }
+
+  bubble.innerHTML = `<strong>Assistant:</strong> "${responseText}"`;
+
+  // Speech synthesis
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(responseText);
+    utter.rate = 1.05;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  }
+}
+
+// Scanner Simulator
+function openScannerModal() {
+  playBeep(700, 0.05);
+  document.getElementById('modal-scanner').classList.add('active');
+}
+
+function simulateQRScan(batchId) {
+  playBeep(1200, 0.12);
+  closeModals();
+  showToast(`QR Recognized: [BATCH-${batchId}] Lion's Mane`);
+  switchTab('dashboard');
+  setTimeout(() => openBatchDetail(batchId), 300);
+}
+
+function printQRModal(text) {
+  playBeep(700, 0.05);
+  document.getElementById('qr-code-text').innerText = text;
+  document.getElementById('modal-qr-print').classList.add('active');
+}
+
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+}
+
+// Settings
+function testHubConnection() {
+  playBeep(880, 0.05);
+  showToast('Tuya Local Gateway: 0.42ms ping verified • LAN OK');
+}
+
+function triggerDecoyTest() {
+  playBeep(440, 0.1);
+  showToast('🔒 Decoy Mode simulated: Hiding proprietary vaults');
+}
+
+function resetDemoState() {
+  if (confirm("Reset all interactive data back to factory demo defaults?")) {
+    AppState = defaultState;
+    saveState();
+    renderBatches();
+    renderGenetics();
+    renderJars();
+    updateTotalPower();
+    showToast('Factory demo data restored');
+  }
+}
+
+// Init
+window.addEventListener('DOMContentLoaded', () => {
+  renderBatches();
+  renderGenetics();
+  renderJars();
+  updateTotalPower();
+  calcBE();
+});
+</script>
 </body>
 </html>
