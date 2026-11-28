@@ -142,6 +142,18 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             store.runAutopilotCycle()
         } else if url.host?.lowercased() == "control" || url.host?.lowercased() == "device" {
             store.checkPendingWidgetCommands()
+        } else if url.host?.lowercased() == "hub" || url.host?.lowercased() == "pair-hub" {
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+                  let items = components.queryItems else { return }
+            if let host = items.first(where: { $0.name == "host" || $0.name == "ip" })?.value, !host.isEmpty {
+                store.db.environmentConfig.piHubIP = host
+                if let portStr = items.first(where: { $0.name == "port" })?.value, let p = Int(portStr) {
+                    store.db.environmentConfig.piHubPort = p
+                }
+                store.saveImmediately()
+                MycoSyncManager.shared.triggerToast(message: "🍓 MycoLab Hub: \(host)")
+                NotificationCenter.default.post(name: NSNotification.Name("MycoLabSwitchTab"), object: 3)
+            }
         } else if url.host?.lowercased() == "camera" || url.host?.lowercased() == "live" {
             NotificationCenter.default.post(name: NSNotification.Name("MycoLabSwitchTab"), object: 0)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

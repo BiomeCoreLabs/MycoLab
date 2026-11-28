@@ -267,5 +267,14 @@ echo -e "${CYAN}Stappen in de MycoLab App (iPhone / Mac):${NC}"
 echo -e "1. Open de MycoLab app en navigeer naar ${BOLD}Settings ➔ Tuya Hub${NC}."
 echo -e "2. Vul bij Hub IP in: ${BOLD}${TAIL_IP}${NC} (voor bereik overal) of ${BOLD}${PI_IP}${NC} (thuis)."
 echo -e "3. Poort: ${BOLD}8088${NC}."
-echo -e "4. LiveKit Video Server draait automatisch op poort ${BOLD}7880${NC}."
+echo -e "4. Bonjour / mDNS ZeroConf:      ${BOLD}http://pi-lab.local:8088${NC} (zonder IP te typen!)"
+echo -e "5. LiveKit Video Server draait op poort ${BOLD}7880${NC}."
 echo -e "${GREEN}==============================================================================${NC}"
+
+# Genereer koppel QR code voor de MycoLab App
+if command -v qrencode >/dev/null 2>&1 || sudo apt-get install -y qrencode >/dev/null 2>&1; then
+    echo ""
+    echo -e "${BOLD}📱 SCAN MET DE MYCOLAB APP CAMERA OM DEZE HUB AUTOMATISCH TE KOPPELEN:${NC}"
+    qrencode -t ANSI256 "mycolab://hub?host=${PI_IP}&port=8088&name=Pi-Lab"
+    echo ""
+fi

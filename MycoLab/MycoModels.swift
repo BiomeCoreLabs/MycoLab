@@ -1870,17 +1870,23 @@ struct GrowEnvironmentConfig: Codable, Hashable {
     var maxTempAlertThresholdC: Double = 27.5 { didSet { lastModifiedAt = Date() } }
     var minBatteryAlertThresholdPct: Int = 15 { didSet { lastModifiedAt = Date() } }
     
-        // Raspberry Pi Lab Hub 24/7 Autonomy
-    var piHubIP: String? = "192.168.50.115" { didSet { lastModifiedAt = Date() } }
+    // Raspberry Pi Lab Hub 24/7 Autonomy
+    #if DEBUG
+    public static let defaultPiHubHost = "192.168.50.115"
+    #else
+    public static let defaultPiHubHost = "pi-lab.local"
+    #endif
+
+    var piHubIP: String? = defaultPiHubHost { didSet { lastModifiedAt = Date() } }
     var piHubPort: Int? = 8088 { didSet { lastModifiedAt = Date() } }
     var piHubAutonomousActive: Bool? = true { didSet { lastModifiedAt = Date() } }
     var lastPiHubSyncTime: Date? = nil
     var piHubSyncStatusMessage: String? = ""
     
     var effectivePiHubIP: String {
-        let ip = (piHubIP ?? "192.168.50.115").trimmingCharacters(in: .whitespacesAndNewlines)
+        let ip = (piHubIP ?? Self.defaultPiHubHost).trimmingCharacters(in: .whitespacesAndNewlines)
         if ip.isEmpty || ip == "192.168.1.100" {
-            return "192.168.50.115"
+            return Self.defaultPiHubHost
         }
         return ip
     }

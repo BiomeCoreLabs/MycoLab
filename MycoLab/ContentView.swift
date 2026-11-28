@@ -743,6 +743,30 @@ struct InfoTipButton: View {
     
     private func handleScannedQRCode(_ code: String) {
         let clean = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.lowercased().hasPrefix("mycolab://hub") || clean.lowercased().hasPrefix("mycolab://pair-hub") || (clean.contains(":8088") && clean.contains("http")) {
+            if let url = URL(string: clean) {
+                if let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+                   let items = components.queryItems {
+                    if let host = items.first(where: { $0.name == "host" || $0.name == "ip" })?.value, !host.isEmpty {
+                        store.db.environmentConfig.piHubIP = host
+                        if let portStr = items.first(where: { $0.name == "port" })?.value, let p = Int(portStr) {
+                            store.db.environmentConfig.piHubPort = p
+                        }
+                        store.saveImmediately()
+                        MycoSyncManager.shared.triggerToast(message: "🍓 MycoLab Hub: \(host)")
+                        selectedTab = 3
+                        return
+                    }
+                } else if let host = url.host {
+                    store.db.environmentConfig.piHubIP = host
+                    if let port = url.port { store.db.environmentConfig.piHubPort = port }
+                    store.saveImmediately()
+                    MycoSyncManager.shared.triggerToast(message: "🍓 MycoLab Hub: \(host)")
+                    selectedTab = 3
+                    return
+                }
+            }
+        }
         if let proj = store.db.projects.first(where: {
             clean.localizedCaseInsensitiveContains($0.qrCodeID) || $0.qrCodeID.localizedCaseInsensitiveContains(clean)
         }) {

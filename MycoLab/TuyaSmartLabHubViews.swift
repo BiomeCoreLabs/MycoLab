@@ -6689,6 +6689,7 @@ struct PiLabHubSettingsSheet: View {
     @State private var hubIP: String = ""
     @State private var hubPort: String = "8088"
     @State private var isTesting: Bool = false
+    @State private var isScanningNetwork: Bool = false
     @State private var testResult: String? = nil
     @State private var isSuccess: Bool = false
     @State private var hubStorageLabel: String? = nil
@@ -6735,15 +6736,24 @@ struct PiLabHubSettingsSheet: View {
                 // Network settings
                 Section(header: Text(store.t(nl: "Netwerkadres Hub", en: "Hub Network Address"))) {
                     HStack {
-                        Text(store.t(nl: "IP Adres", en: "IP Address"))
+                        Text(store.t(nl: "Host / IP Adres", en: "Host / IP Address"))
                             .foregroundColor(.white)
                         Spacer()
+                        #if DEBUG
                         TextField("192.168.50.115", text: $hubIP)
                             .multilineTextAlignment(.trailing)
                             .foregroundColor(MycoTheme.blue)
                             .keyboardType(.numbersAndPunctuation)
                             .autocorrectionDisabled()
                             .textInputAutocapitalization(.never)
+                        #else
+                        TextField("pi-lab.local", text: $hubIP)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundColor(MycoTheme.blue)
+                            .keyboardType(.numbersAndPunctuation)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                        #endif
                     }
                     
                     HStack {
@@ -6756,35 +6766,62 @@ struct PiLabHubSettingsSheet: View {
                             .keyboardType(.numberPad)
                     }
                     
-                    // Quick Preset Buttons
-                    VStack(alignment: .leading, spacing: 6) {
+                    // Quick Preset Buttons & Auto-Discovery
+                    VStack(alignment: .leading, spacing: 8) {
                         Button {
-                            hubIP = "192.168.50.115"
+                            scanForHubs()
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isScanningNetwork {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: MycoTheme.blue))
+                                        .scaleEffect(0.8)
+                                    Text(store.t(nl: "🔍 Netwerk scannen naar Hubs...", en: "🔍 Scanning network for Hubs..."))
+                                        .font(.caption.bold())
+                                        .foregroundColor(MycoTheme.blue)
+                                } else {
+                                    Image(systemName: "antenna.radiowaves.left.and.right")
+                                        .foregroundColor(MycoTheme.blue)
+                                    Text(store.t(nl: "🔍 Zoek MycoLab Hub in Netwerk (Auto-Discovery)", en: "🔍 Find MycoLab Hub on Network (Auto-Discovery)"))
+                                        .font(.caption.bold())
+                                        .foregroundColor(MycoTheme.blue)
+                                }
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(isScanningNetwork)
+                        
+                        Divider().background(Color.white.opacity(0.1))
+                        
+                        Button {
+                            hubIP = "pi-lab.local"
                             hubPort = "8088"
                         } label: {
-                            Text(store.t(nl: "🍓 Raspberry Pi Lab Hub (192.168.50.115)", en: "🍓 Raspberry Pi Lab Hub (192.168.50.115)"))
+                            Text(store.t(nl: "🍓 Bonjour ZeroConf (pi-lab.local)", en: "🍓 Bonjour ZeroConf (pi-lab.local)"))
                                 .font(.caption.bold())
                                 .foregroundColor(MycoTheme.green)
                         }
                         .buttonStyle(.borderless)
                         
+#if DEBUG
                         Button {
-                            hubIP = "192.168.1.100"
+                            hubIP = "192.168.50.115"
                             hubPort = "8088"
                         } label: {
-                            Text(store.t(nl: "🏠 Standaard LAN IP (192.168.1.100)", en: "🏠 Default LAN IP (192.168.1.100)"))
+                            Text(store.t(nl: "🍓 Eigen Lab Hub (192.168.50.115)", en: "🍓 Local Lab Hub (192.168.50.115)"))
                                 .font(.caption.bold())
-                                .foregroundColor(MycoTheme.blue)
+                                .foregroundColor(Color.cyan)
                         }
                         .buttonStyle(.borderless)
+#endif
                         
                         Button {
                             hubIP = "127.0.0.1"
                             hubPort = "8088"
                         } label: {
-                            Text(store.t(nl: "💻 Localhost (127.0.0.1)", en: "💻 Localhost (127.0.0.1)"))
+                            Text(store.t(nl: "💻 Localhost Mac (127.0.0.1)", en: "💻 Localhost Mac (127.0.0.1)"))
                                 .font(.caption.bold())
-                                .foregroundColor(Color.green)
+                                .foregroundColor(Color.gray)
                         }
                         .buttonStyle(.borderless)
                     }
@@ -7059,6 +7096,46 @@ struct PiLabHubSettingsSheet: View {
             _ = await store.checkPiHubOnline()
             await store.syncSchedulesToPiHub()
             await store.syncDevicesFromPiHub()
+        }
+    }
+    
+    private func scanForHubs() {
+        isScanningNetwork = true
+        testResult = nil
+        Task {
+            var candidates = ["pi-lab.local", "mycolab-hub.local"]
+            #if DEBUG
+            candidates.append("192.168.50.115")
+            #endif
+            
+            var foundHost: String? = nil
+            for host in candidates {
+                guard let url = URL(string: "http://\(host):8088/status") else { continue }
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 2.0
+                if let (data, resp) = try? await URLSession.shared.data(for: req),
+                   let http = resp as? HTTPURLResponse, http.statusCode == 200,
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let status = json["status"] as? String, status == "online" {
+                    foundHost = host
+                    break
+                }
+            }
+            
+            await MainActor.run {
+                self.isScanningNetwork = false
+                if let host = foundHost {
+                    self.hubIP = host
+                    self.hubPort = "8088"
+                    self.testConnection()
+                } else {
+                    self.isSuccess = false
+                    self.testResult = store.t(
+                        nl: "Geen actieve Hub gevonden. Zorg dat de Pi aan staat en met hetzelfde Wi-Fi netwerk is verbonden.",
+                        en: "No active Hub found. Ensure the Pi is powered on and connected to the same Wi-Fi network."
+                    )
+                }
+            }
         }
     }
     

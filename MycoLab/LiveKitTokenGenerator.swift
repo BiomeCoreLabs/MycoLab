@@ -10,7 +10,14 @@ import Foundation
 import CryptoKit
 
 nonisolated public enum LiveKitTokenGenerator: Sendable {
+    #if DEBUG
+    // In lokale test/ontwikkelmodus op Mac van de maker
     public static let defaultServerUrl = "ws://192.168.50.115:7880"
+    #else
+    // In publieke Release builds voor iedereen (geen privégegevens, mDNS ZeroConf)
+    public static let defaultServerUrl = "ws://pi-lab.local:7880"
+    #endif
+
     public static let defaultApiKey = "mycolab_key"
     public static let defaultApiSecret = "mycolab_secret_lab_key_2026"
     public static let defaultRoom = "mycolab-grow-room"
@@ -80,7 +87,12 @@ nonisolated public enum LiveKitTokenGenerator: Sendable {
     }
 
     public static func switchToPiLabHub(ip: String? = nil) {
-        let targetIP = ip ?? "192.168.50.115"
+        #if DEBUG
+        let fallback = "192.168.50.115"
+        #else
+        let fallback = "pi-lab.local"
+        #endif
+        let targetIP = ip ?? fallback
         saveConfiguration(
             serverUrl: "ws://\(targetIP):7880",
             apiKey: defaultApiKey,
