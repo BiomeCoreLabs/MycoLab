@@ -2083,7 +2083,7 @@ struct AIOnboardingWizardView: View {
     @State private var currentStep: Int = 0
     
     // User Answers
-    @State private var selectedStartOption: Int = 1 // 0: Clean Lab, 1: Demo Data, 2: Dedicated Camera
+    @State private var selectedStartOption: Int = 0 // 0: Clean Lab, 1: Demo Data, 2: Dedicated Camera
     @State private var deviceRoleIndex: Int = 0 // 0: Kweker / Hoofdapparaat, 1: Dedicated Kweekcamera & Hub
     @State private var experienceIndex: Int = 0 // 0: Beginner, 1: Enkele kweken, 2: Ervaren, 3: Pro
     @State private var intentIndex: Int = 0 // 0: Culinair, 1: Actief, 2: Beide, 3: Lab only
@@ -2457,63 +2457,7 @@ struct AIOnboardingWizardView: View {
             .padding(.bottom, 4)
             
             VStack(spacing: 12) {
-                // Card 1: Verken met Demo Data (Recommended)
-                Button {
-                    selectedStartOption = 1
-                } label: {
-                    HStack(alignment: .top, spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(selectedStartOption == 1 ? Color(hex: "5E5CE6").opacity(0.2) : Color.white.opacity(0.06))
-                                .frame(width: 44, height: 44)
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(selectedStartOption == 1 ? Color(hex: "7D7AFF") : MycoTheme.textSecondary)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 5) {
-                            HStack {
-                                Text(store.t(nl: "Verken met Demo Data", en: "Explore with Demo Data"))
-                                    .font(.headline.bold())
-                                    .foregroundColor(.white)
-                                Spacer()
-                                Text(store.t(nl: "Aanbevolen", en: "Recommended"))
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(Color(hex: "7D7AFF"))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color(hex: "5E5CE6").opacity(0.18))
-                                    .cornerRadius(6)
-                            }
-                            
-                            Text(store.t(
-                                nl: "Ervaar de app direct in volle actie met realistische Lion's Mane & Oesterzwam batches, gesimuleerde sensoren, kweekgrafieken en voorraadpotten.",
-                                en: "Experience the app immediately with realistic Lion's Mane & Oyster mushroom batches, simulated sensors, telemetry charts, and cured stock."
-                            ))
-                            .font(.caption)
-                            .foregroundColor(MycoTheme.textSecondary)
-                            .multilineTextAlignment(.leading)
-                            
-                            HStack(spacing: 8) {
-                                Label("Lion's Mane & Oesterzwam", systemImage: "allergens")
-                                Label("Wifi Stekkers", systemImage: "powerplug.fill")
-                            }
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(selectedStartOption == 1 ? Color(hex: "7D7AFF") : MycoTheme.textSecondary.opacity(0.7))
-                            .padding(.top, 2)
-                        }
-                    }
-                    .padding(16)
-                    .background(selectedStartOption == 1 ? Color(hex: "5E5CE6").opacity(0.12) : MycoTheme.card)
-                    .cornerRadius(14)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(selectedStartOption == 1 ? Color(hex: "5E5CE6") : MycoTheme.border, lineWidth: selectedStartOption == 1 ? 1.5 : 1)
-                    )
-                }
-                .buttonStyle(.plain)
-                
-                // Card 2: Schoon Kweeklab Starten (Clean Slate)
+                // Card 1: Schoon Kweeklab Starten (Clean Slate - Aanbevolen)
                 Button {
                     selectedStartOption = 0
                 } label: {
@@ -2533,7 +2477,7 @@ struct AIOnboardingWizardView: View {
                                     .font(.headline.bold())
                                     .foregroundColor(.white)
                                 Spacer()
-                                Text(store.t(nl: "Blanco Lab", en: "Blank Lab"))
+                                Text(store.t(nl: "Aanbevolen (Blanco)", en: "Recommended (Clean)"))
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(MycoTheme.green)
                                     .padding(.horizontal, 8)
@@ -2543,16 +2487,16 @@ struct AIOnboardingWizardView: View {
                             }
                             
                             Text(store.t(
-                                nl: "100% blanco start voor kwekers die direct eigen kweeksoorten en potten willen invoeren. Kweekcamera's en wifi-stekkers voeg je optioneel pas toe wanneer je zover bent.",
-                                en: "100% blank start for growers wanting to enter their own mushroom strains and batches. Cameras and smart plugs can be added optionally whenever ready."
+                                nl: "100% blanco start voor kwekers die direct hun eigen kweeksoorten, batches en potten willen invoeren. Geen ongevraagde data.",
+                                en: "100% blank start for growers wanting to enter their own mushroom strains, batches, and jars directly. Zero unwanted data."
                             ))
                             .font(.caption)
                             .foregroundColor(MycoTheme.textSecondary)
                             .multilineTextAlignment(.leading)
                             
                             HStack(spacing: 8) {
-                                Label("Handmatig kweekjournaal", systemImage: "book.closed")
-                                Label("Modulair uitbreidbaar", systemImage: "plus.circle")
+                                Label("Eigen soorten invoeren", systemImage: "plus.circle.fill")
+                                Label("100% Blanco", systemImage: "checkmark.shield.fill")
                             }
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(selectedStartOption == 0 ? MycoTheme.green : MycoTheme.textSecondary.opacity(0.7))
@@ -2560,11 +2504,67 @@ struct AIOnboardingWizardView: View {
                         }
                     }
                     .padding(16)
-                    .background(selectedStartOption == 0 ? MycoTheme.green.opacity(0.1) : MycoTheme.card)
+                    .background(selectedStartOption == 0 ? MycoTheme.green.opacity(0.12) : MycoTheme.card)
                     .cornerRadius(14)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(selectedStartOption == 0 ? MycoTheme.green : MycoTheme.border, lineWidth: selectedStartOption == 0 ? 1.5 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                // Card 2: Verken met Demo Data (Optioneel)
+                Button {
+                    selectedStartOption = 1
+                } label: {
+                    HStack(alignment: .top, spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(selectedStartOption == 1 ? Color(hex: "5E5CE6").opacity(0.2) : Color.white.opacity(0.06))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(selectedStartOption == 1 ? Color(hex: "7D7AFF") : MycoTheme.textSecondary)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack {
+                                Text(store.t(nl: "Verken met Voorbeelddata", en: "Explore with Demo Data"))
+                                    .font(.headline.bold())
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text(store.t(nl: "Voorbeeld", en: "Example"))
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(Color(hex: "7D7AFF"))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color(hex: "5E5CE6").opacity(0.18))
+                                    .cornerRadius(6)
+                            }
+                            
+                            Text(store.t(
+                                nl: "Verken de app met voorbeeld Oesterzwam & Lion's Mane batches en gesimuleerde sensoren om de functies uit te proberen.",
+                                en: "Explore the app with sample Oyster & Lion's Mane batches and simulated sensors to test features."
+                            ))
+                            .font(.caption)
+                            .foregroundColor(MycoTheme.textSecondary)
+                            .multilineTextAlignment(.leading)
+                            
+                            HStack(spacing: 8) {
+                                Label("Voorbeeld data", systemImage: "sparkles")
+                                Label("Altijd wisbaar", systemImage: "trash")
+                            }
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(selectedStartOption == 1 ? Color(hex: "7D7AFF") : MycoTheme.textSecondary.opacity(0.7))
+                            .padding(.top, 2)
+                        }
+                    }
+                    .padding(16)
+                    .background(selectedStartOption == 1 ? Color(hex: "5E5CE6").opacity(0.1) : MycoTheme.card)
+                    .cornerRadius(14)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(selectedStartOption == 1 ? Color(hex: "5E5CE6") : MycoTheme.border, lineWidth: selectedStartOption == 1 ? 1.5 : 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -2951,7 +2951,53 @@ struct AIOnboardingWizardView: View {
             .font(.caption)
             .foregroundColor(MycoTheme.textSecondary)
             
-            // Choice A: Install Custom Starter Pack
+            // Choice A: Start Completely Clean (Recommended)
+            Button {
+                finishCleanSlate()
+            } label: {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "leaf.fill")
+                            .font(.title2)
+                            .foregroundColor(MycoTheme.green)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(store.t(nl: "Start Met Een Helemaal Lege App", en: "Start With A Completely Clean App"))
+                                .font(.headline.bold())
+                                .foregroundColor(.white)
+                            Text(store.t(nl: "100% Blanco Lab (Aanbevolen)", en: "100% Blank Lab (Recommended)"))
+                                .font(.caption2.bold())
+                                .foregroundColor(MycoTheme.green)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(MycoTheme.textSecondary)
+                    }
+                    
+                    Text(store.t(
+                        nl: "Geen vooringestelde soorten of batches. Jij voegt alles vanaf nul zelf toe naar eigen wens.",
+                        en: "No preset strains or batches. You add everything from scratch according to your needs."
+                    ))
+                    .font(.caption)
+                    .foregroundColor(MycoTheme.textSecondary)
+                    .multilineTextAlignment(.leading)
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(MycoTheme.green)
+                            .font(.caption)
+                        Text(store.t(nl: "Schoon & Blanco kweeklab", en: "Clean & blank grow lab"))
+                            .font(.caption.bold())
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(16)
+                .background(MycoTheme.card)
+                .cornerRadius(12)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(MycoTheme.green.opacity(0.7), lineWidth: 1.5))
+            }
+            .buttonStyle(.plain)
+            
+            // Choice B: Install Optional Starter Pack
             Button {
                 finishWithStarterPack()
             } label: {
@@ -2959,14 +3005,14 @@ struct AIOnboardingWizardView: View {
                     HStack {
                         Image(systemName: "sparkles.rectangle.stack.fill")
                             .font(.title2)
-                            .foregroundColor(MycoTheme.green)
+                            .foregroundColor(MycoTheme.blue)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(store.t(nl: "Installeer Starterspakket op Maat", en: "Install Custom Starter Pack"))
+                            Text(store.t(nl: "Installeer Optioneel Starterspakket", en: "Install Optional Starter Pack"))
                                 .font(.headline.bold())
                                 .foregroundColor(.white)
                             Text(recommendedPackageTitle())
                                 .font(.caption2)
-                                .foregroundColor(MycoTheme.green)
+                                .foregroundColor(MycoTheme.blue)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
@@ -2977,52 +3023,6 @@ struct AIOnboardingWizardView: View {
                         .font(.caption)
                         .foregroundColor(MycoTheme.textSecondary)
                         .multilineTextAlignment(.leading)
-                    
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(MycoTheme.green)
-                            .font(.caption)
-                        Text(store.t(nl: "Klaar voor eerste kweek", en: "Ready for your first grow"))
-                            .font(.caption.bold())
-                            .foregroundColor(.white)
-                    }
-                }
-                .padding(16)
-                .background(MycoTheme.card)
-                .cornerRadius(12)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(MycoTheme.green.opacity(0.6), lineWidth: 1.5))
-            }
-            .buttonStyle(.plain)
-            
-            // Choice B: Start Completely Clean
-            Button {
-                finishCleanSlate()
-            } label: {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "square.dashed")
-                            .font(.title2)
-                            .foregroundColor(MycoTheme.blue)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(store.t(nl: "Start Met Een Helemaal Lege App", en: "Start With A Completely Clean App"))
-                                .font(.headline.bold())
-                                .foregroundColor(.white)
-                            Text(store.t(nl: "100% Blanco Lab", en: "100% Blank Lab"))
-                                .font(.caption2)
-                                .foregroundColor(MycoTheme.blue)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .foregroundColor(MycoTheme.textSecondary)
-                    }
-                    
-                    Text(store.t(
-                        nl: "Geen vooringestelde soorten, recepten of voorraaditems. Jij voegt alles zelf vanaf nul toe naar eigen wens.",
-                        en: "No preset strains, recipes, or supply items. You build everything from scratch your way."
-                    ))
-                    .font(.caption)
-                    .foregroundColor(MycoTheme.textSecondary)
-                    .multilineTextAlignment(.leading)
                 }
                 .padding(16)
                 .background(MycoTheme.card)
