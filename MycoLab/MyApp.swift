@@ -107,11 +107,6 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                 
                 Divider()
                 
-                Button("AI & QR Scanner Openen") {
-                    NotificationCenter.default.post(name: NSNotification.Name("MycoLabOpenQRScanner"), object: nil)
-                }
-                .keyboardShortcut("k", modifiers: .command)
-                
                 Button("Nieuwe Batch Starten") {
                     NotificationCenter.default.post(name: NSNotification.Name("MycoLabSwitchTab"), object: 0)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -119,6 +114,28 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
                     }
                 }
                 .keyboardShortcut("n", modifiers: .command)
+                
+                Button("Telemetrie & Sensoren Verversen") {
+                    NotificationCenter.default.post(name: NSNotification.Name("MycoLabRefreshSensors"), object: nil)
+                }
+                .keyboardShortcut("r", modifiers: .command)
+                
+                Button("AI & QR Scanner Openen") {
+                    NotificationCenter.default.post(name: NSNotification.Name("MycoLabOpenQRScanner"), object: nil)
+                }
+                .keyboardShortcut("k", modifiers: .command)
+                
+                Button("Cleanroom Voice Assistent") {
+                    NotificationCenter.default.post(name: NSNotification.Name("MycoLabOpenVoiceConsole"), object: nil)
+                }
+                .keyboardShortcut("j", modifiers: .command)
+                
+                Divider()
+                
+                Button("Instellingen & Hub...") {
+                    NotificationCenter.default.post(name: NSNotification.Name("MycoLabOpenSettings"), object: nil)
+                }
+                .keyboardShortcut(",", modifiers: .command)
             }
         }
 #endif

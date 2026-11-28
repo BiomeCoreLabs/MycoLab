@@ -128,6 +128,22 @@ struct LivingLabBioHeroCard: View {
         store.db.environmentConfig.hasActiveSensor
     }
     
+    private func timeAgoString(from date: Date) -> String {
+        let diff = max(0, Int(Date().timeIntervalSince(date)))
+        if diff < 60 {
+            return store.isEnglish ? "just now" : "zojuist"
+        } else if diff < 3600 {
+            let m = diff / 60
+            return "\(m)m"
+        } else if diff < 86400 {
+            let h = diff / 3600
+            return "\(h)u"
+        } else {
+            let d = diff / 86400
+            return "\(d)d"
+        }
+    }
+
     private var isManualReading: Bool {
         store.db.environmentConfig.isManualReading
     }
@@ -184,16 +200,26 @@ struct LivingLabBioHeroCard: View {
                         }
                         
                         HStack(spacing: 5) {
+                            let isStale = (store.db.environmentConfig.currentReadingTime != nil && Date().timeIntervalSince(store.db.environmentConfig.currentReadingTime!) > 900)
                             Circle()
-                                .fill(hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : MycoTheme.textSecondary))
+                                .fill(isStale ? MycoTheme.amber : (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : MycoTheme.textSecondary)))
                                 .frame(width: 5, height: 5)
-                            Text(hasActiveSensor
-                                 ? store.t(nl: "Sensor Actief", en: "Sensor Active")
-                                 : (isManualReading
-                                    ? store.t(nl: "Handmatige Meting", en: "Manual Reading")
-                                    : store.t(nl: "Geen Sensordata", en: "No Sensor Data")))
-                                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                .foregroundColor(hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : MycoTheme.textSecondary))
+                            
+                            HStack(spacing: 3) {
+                                Text(hasActiveSensor
+                                     ? (isStale ? store.t(nl: "Sensor (Offline Cache)", en: "Sensor (Offline Cache)") : store.t(nl: "Sensor Actief", en: "Sensor Active"))
+                                     : (isManualReading
+                                        ? store.t(nl: "Handmatige Meting", en: "Manual Reading")
+                                        : store.t(nl: "Geen Sensordata", en: "No Sensor Data")))
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .foregroundColor(isStale ? MycoTheme.amber : (hasActiveSensor ? MycoTheme.green : (isManualReading ? MycoTheme.blue : MycoTheme.textSecondary)))
+                                
+                                if let rDate = store.db.environmentConfig.currentReadingTime {
+                                    Text("• \(timeAgoString(from: rDate))")
+                                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                                        .foregroundColor(MycoTheme.textSecondary.opacity(0.8))
+                                }
+                            }
                         }
                     }
                 }
@@ -1605,6 +1631,17 @@ struct ModernDashboardTabView: View {
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MycoLabOpenLiveMonitor"))) { _ in
                 showRemoteMonitor = true
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MycoLabOpenSettings"))) { _ in
+                showSettings = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MycoLabOpenVoiceConsole"))) { _ in
+                showCleanroomVoice = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MycoLabRefreshSensors"))) { _ in
+                store.pollAllConnectedSensors(force: true)
+                let gen = UINotificationFeedbackGenerator()
+                gen.notificationOccurred(.success)
+            }
             .sheet(isPresented: $showSpaceCalculator) {
                 GrowSpaceSizeAndAIClimateView()
                     .environmentObject(store)
@@ -1955,64 +1992,91 @@ struct ModernDashboardTabView: View {
     
     // MARK: - BiomeCore Empty State
     private var biomeCoreEmptyState: some View {
-        VStack(spacing: 14) {
+        let isCompletelyEmpty = store.db.projects.isEmpty
+        return VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.cyan.opacity(0.12))
-                    .frame(width: 64, height: 64)
+                    .fill(isCompletelyEmpty ? MycoTheme.green.opacity(0.12) : Color.cyan.opacity(0.12))
+                    .frame(width: 68, height: 68)
                     .overlay(
                         Circle()
-                            .stroke(Color.cyan.opacity(0.3), lineWidth: 1)
+                            .stroke(isCompletelyEmpty ? MycoTheme.green.opacity(0.3) : Color.cyan.opacity(0.3), lineWidth: 1)
                     )
-                Image(systemName: "atom")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(Color.cyan)
+                Image(systemName: isCompletelyEmpty ? "leaf.fill" : "atom")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(isCompletelyEmpty ? MycoTheme.green : Color.cyan)
             }
             
-            VStack(spacing: 4) {
-                Text(store.t(nl: "BiomeCore Cleanroom Gereed", en: "BiomeCore Cleanroom Ready"))
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+            VStack(spacing: 6) {
+                Text(isCompletelyEmpty
+                     ? store.t(nl: "Welkom in je Kweeklab! 🍄", en: "Welcome to your Grow Lab! 🍄")
+                     : store.t(nl: "Geen batches in deze fase", en: "No batches in this phase"))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 
-                Text(store.t(
-                    nl: "Geen batches gevonden voor deze selectie. Start je eerste kweekproject of pas het fasefilter aan.",
-                    en: "No batches found for this selection. Start your first grow project or adjust the phase filter."
-                ))
-                .font(.system(size: 12))
+                Text(isCompletelyEmpty
+                     ? store.t(
+                        nl: "Je lab is helemaal schoon en gereed. Start je allereerste kweekbatch om kweekfasen, grafieken en herinneringen te activeren.",
+                        en: "Your lab is pristine and ready. Start your very first grow batch to unlock phase tracking, telemetry charts, and reminders."
+                     )
+                     : store.t(
+                        nl: "Er zijn geen batches gevonden met dit filter. Verander de fase of selecteer 'Alle' om al je projecten te zien.",
+                        en: "No batches found with this filter. Change the phase or select 'All' to view all projects."
+                     ))
+                .font(.system(size: 13))
                 .foregroundColor(MycoTheme.textSecondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 28)
             }
             
-            Button {
-                let gen = UIImpactFeedbackGenerator(style: .medium)
-                gen.impactOccurred()
-                showCreateBatch = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 13, weight: .bold))
-                    Text(store.t(nl: "+ Eerste Batch Starten", en: "+ Start First Batch"))
-                        .font(.system(size: 13, weight: .bold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 9)
-                .background(
-                    LinearGradient(
-                        colors: [MycoTheme.blue, Color(hex: "#3B82F6")],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+            HStack(spacing: 12) {
+                Button {
+                    let gen = UIImpactFeedbackGenerator(style: .medium)
+                    gen.impactOccurred()
+                    showCreateBatch = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 14, weight: .bold))
+                        Text(store.t(nl: "+ Eerste Batch Starten", en: "+ Start First Batch"))
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(
+                        LinearGradient(
+                            colors: [MycoTheme.blue, Color(hex: "#3B82F6")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .cornerRadius(20)
-                .shadow(color: MycoTheme.blue.opacity(0.4), radius: 6, y: 2)
+                    .cornerRadius(20)
+                    .shadow(color: MycoTheme.blue.opacity(0.4), radius: 6, y: 2)
+                }
+                .buttonStyle(ModernBouncyButtonStyle())
+                
+                if !isCompletelyEmpty {
+                    Button {
+                        withAnimation {
+                            selectedPhaseFilter = "Alle"
+                        }
+                    } label: {
+                        Text(store.t(nl: "Toon Alle Batches", en: "Show All Batches"))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(MycoTheme.blue)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .background(MycoTheme.blue.opacity(0.12))
+                            .cornerRadius(20)
+                    }
+                    .buttonStyle(ModernBouncyButtonStyle())
+                }
             }
-            .buttonStyle(ModernBouncyButtonStyle())
         }
-        .padding(.vertical, 28)
+        .padding(.vertical, 32)
         .frame(maxWidth: .infinity)
-        .background(MycoTheme.card.opacity(0.7))
+        .background(MycoTheme.card.opacity(0.75))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)

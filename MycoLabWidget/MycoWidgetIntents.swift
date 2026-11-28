@@ -58,6 +58,7 @@ public struct ToggleHumidifierIntent: AppIntent {
         defaults.set("toggle_humidifier", forKey: "mycolab_pending_actuator_action")
         defaults.set(Date().timeIntervalSince1970, forKey: "mycolab_last_widget_command_timestamp")
         sendHubSwitchCommand(deviceType: "Humidifier", on: newState)
+        WidgetCenter.shared.reloadTimelines(ofKind: "MycoLabWidget")
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
@@ -86,6 +87,7 @@ public struct ToggleExhaustFanIntent: AppIntent {
         defaults.set("toggle_fan", forKey: "mycolab_pending_actuator_action")
         defaults.set(Date().timeIntervalSince1970, forKey: "mycolab_last_widget_command_timestamp")
         sendHubSwitchCommand(deviceType: "ExhaustFan", on: newState)
+        WidgetCenter.shared.reloadTimelines(ofKind: "MycoLabWidget")
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
@@ -114,6 +116,7 @@ public struct ToggleGrowLightIntent: AppIntent {
         defaults.set("toggle_light", forKey: "mycolab_pending_actuator_action")
         defaults.set(Date().timeIntervalSince1970, forKey: "mycolab_last_widget_command_timestamp")
         sendHubSwitchCommand(deviceType: "GrowLight", on: newState)
+        WidgetCenter.shared.reloadTimelines(ofKind: "MycoLabWidget")
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
@@ -140,6 +143,7 @@ public struct TriggerFaePulseIntent: AppIntent {
         defaults.set("trigger_fae_pulse", forKey: "mycolab_pending_actuator_action")
         defaults.set(Date().timeIntervalSince1970, forKey: "mycolab_last_widget_command_timestamp")
         sendHubSwitchCommand(deviceType: "ExhaustFan", on: true)
+        WidgetCenter.shared.reloadTimelines(ofKind: "MycoLabWidget")
         WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
