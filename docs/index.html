@@ -1016,27 +1016,37 @@
             <div class="card-header">
               <div class="card-title">
                 <span>📹</span>
-                <span>Chamber 01 • Optical Feed</span>
+                <span>Chamber 01 • Live Optical Stream</span>
               </div>
               <span class="card-tag">WebRTC 60FPS</span>
             </div>
 
             <div class="camera-viewport" style="background:#05070a;position:relative;overflow:hidden;border-radius:var(--radius-md);aspect-ratio:16/9;">
-              <img id="chamber-img-base" src="assets/chamber_base.jpg" alt="Chamber Base" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;z-index:1;">
-              <img id="chamber-img-mist" src="assets/chamber_mist.jpg" alt="Chamber Mist" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:1;z-index:2;">
-              <img id="chamber-img-night" src="assets/chamber_night.jpg" alt="Chamber Night Vision" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:0;z-index:3;">
-              <img id="chamber-img-harvest" src="assets/chamber_harvested.jpg" alt="Chamber Harvested" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:0;z-index:2;">
+              <!-- 24/7 Live Optical Video Stream -->
+              <video id="chamber-video" src="assets/animycolab.mp4" autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease, filter 0.4s ease, opacity 0.5s ease;z-index:1;"></video>
+              
+              <!-- Harvested Cut Blocks Overlay (fades in when harvested) -->
+              <img id="chamber-img-harvest" src="assets/chamber_harvested.jpg" alt="Chamber Harvested" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:0;z-index:2;pointer-events:none;">
+
+              <!-- Night Vision Filter Overlay -->
+              <div id="chamber-light-overlay" style="position:absolute;inset:0;pointer-events:none;transition:background 0.4s ease;z-index:3;"></div>
+
+              <!-- Real-time Atmospheric Mist & Fog Canvas -->
               <canvas id="chamber-fx-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
+
+              <!-- Live HUD Overlay -->
               <div class="camera-overlay" style="z-index:5;">
-                <div class="live-badge"><div class="rec-dot"></div> LIVE OPTICAL FEED</div>
-                <div class="fps-badge" id="camera-res-tag">4K HDR • 60 FPS • LOCAL LAN</div>
+                <div class="live-badge"><div class="rec-dot"></div> LIVE STREAM</div>
+                <div class="fps-badge" id="camera-res-tag">1080p • 60 FPS • LOCAL LAN</div>
               </div>
-              <!-- Resting / Dunk Flush 2 Bar -->
+
+              <!-- Resting / Dunk Flush 2 Banner -->
               <div id="chamber-harvest-bar" style="display:none;position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(10,16,26,0.92);border:1px solid var(--accent-green);padding:7px 16px;border-radius:24px;z-index:7;font-size:12px;align-items:center;gap:12px;box-shadow:0 8px 28px rgba(0,0,0,0.7);backdrop-filter:blur(8px);">
                 <span style="color:#fff;font-weight:700;display:flex;align-items:center;gap:6px;"><span>✂️</span> FLUSH 1 HARVESTED • RESTING BLOCKS</span>
                 <button onclick="dunkAndRegrow()" style="background:var(--accent-green);color:#000;border:none;padding:5px 12px;border-radius:12px;font-size:11px;font-weight:800;cursor:pointer;transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">💧 Dunk Substrate & Regrow Flush 2</button>
               </div>
-              <!-- AI Bounding Boxes -->
+
+              <!-- AI Primordia Bounding Boxes -->
               <div class="ai-boxes-overlay" id="ai-boxes" style="z-index:6;">
                 <div class="ai-box" style="top:25%;left:28%;width:28%;height:32%;">
                   <span class="ai-box-label">🦁 Lion's Mane (H. erinaceus) 98.4%</span>
@@ -1045,6 +1055,13 @@
                   <span class="ai-box-label">🍄 Blue Oyster (P. ostreatus) 96.1%</span>
                 </div>
               </div>
+            </div>
+
+            <!-- Interactive Growth Time-Lapse Scrubber -->
+            <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:9px 14px;margin-top:12px;display:flex;align-items:center;gap:12px;">
+              <span style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;white-space:nowrap;display:flex;align-items:center;gap:5px;"><span>⏱️</span> Timelapse</span>
+              <input type="range" id="growth-scrubber" min="1" max="14" value="14" step="1" oninput="scrubGrowth(this.value)" style="flex:1;accent-color:var(--accent-green);cursor:pointer;height:5px;">
+              <span id="growth-scrubber-label" style="font-size:11px;font-weight:800;color:var(--accent-green);min-width:115px;text-align:right;">Day 14 • Mature Flush</span>
             </div>
 
             <div class="camera-controls">
@@ -1516,7 +1533,6 @@ const defaultState = {
   activeBatchId: null
 };
 
-// Load or Initialize AppState
 let AppState = JSON.parse(localStorage.getItem('mycolabs_state') || 'null');
 if (!AppState) {
   AppState = defaultState;
@@ -1527,7 +1543,15 @@ function saveState() {
   localStorage.setItem('mycolabs_state', JSON.stringify(AppState));
 }
 
-// Audio Feedback (Web Audio API)
+// Environmental state
+let envState = {
+  temp: 21.5,
+  rh: 90.2,
+  co2: 740,
+  isHarvested: false
+};
+
+// Web Audio API feedback
 const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
 function playBeep(freq = 600, duration = 0.08) {
   if (!audioCtx) return;
@@ -1550,23 +1574,21 @@ let toastTimeout;
 function showToast(msg) {
   const t = document.getElementById('toast');
   const txt = document.getElementById('toast-text');
+  if (!t || !txt) return;
   txt.innerText = msg;
   t.classList.add('show');
   clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => t.classList.remove('show'), 3200);
 }
 
-// Navigation Tab Switching
+// Tab Switching
 function switchTab(tabId) {
   playBeep(880, 0.05);
   AppState.currentTab = tabId;
   saveState();
 
-  // Desktop sidebar
   document.querySelectorAll('.sidebar .nav-item').forEach(el => el.classList.remove('active'));
-  // Panes
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-  // Mobile bottom nav
   document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
 
   const pane = document.getElementById('pane-' + tabId);
@@ -1575,19 +1597,17 @@ function switchTab(tabId) {
   const bnav = document.getElementById('bnav-' + tabId);
   if (bnav) bnav.classList.add('active');
 
-  // Breadcrumb text
   const crumb = document.getElementById('crumb-chamber');
   if (crumb) {
     if (tabId === 'dashboard') crumb.innerText = 'CHAMBER 01 • AUTOMATED';
     else if (tabId === 'genetics') crumb.innerText = 'GENETICS & ISOLATIONS';
     else if (tabId === 'stash') crumb.innerText = 'STASH & INVENTORY VAULT';
     else if (tabId === 'tools') crumb.innerText = 'TOOLS & CVG CALCULATORS';
-    
     else if (tabId === 'settings') crumb.innerText = 'SYSTEM CONFIG & LOCAL LAN';
   }
 }
 
-// Smart Relays Toggle
+// Relay Switches
 function toggleRelay(key, active) {
   playBeep(active ? 750 : 350, 0.1);
   AppState.relays[key].active = active;
@@ -1604,75 +1624,132 @@ function toggleRelay(key, active) {
   showToast(key.toUpperCase() + ' relay turned ' + (active ? 'ON' : 'OFF'));
 }
 
-// Chamber Visual FX (Persistent Lingering Mist & Gradual Fan Extraction)
+function updateTotalPower() {
+  let total = 0;
+  for (const [k, v] of Object.entries(AppState.relays)) {
+    if (v.active) total += v.watts;
+  }
+  const tag = document.getElementById('total-power-tag');
+  if (tag) tag.innerText = total + 'W TOTAL';
+}
+
+// Camera Controls (Live Stream)
+let currentLens = 1.0;
+function setLens(scale, btn) {
+  playBeep(900, 0.04);
+  currentLens = scale;
+  document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  
+  const video = document.getElementById('chamber-video');
+  if (video) video.style.transform = 'scale(' + scale + ')';
+
+  const harvestImg = document.getElementById('chamber-img-harvest');
+  if (harvestImg) harvestImg.style.transform = 'scale(' + scale + ')';
+
+  showToast('Optical Zoom: ' + scale + 'x');
+}
+
+function toggleAIDetector() {
+  playBeep(640, 0.08);
+  const boxes = document.getElementById('ai-boxes');
+  const btn = document.getElementById('ai-detector-btn');
+  if (!boxes) return;
+  const active = boxes.classList.toggle('active');
+  if (active) {
+    if (btn) {
+      btn.style.borderColor = 'var(--accent-green)';
+      btn.style.color = 'var(--accent-green)';
+    }
+    showToast('AI Pinhead Vision: 2 clusters localized (98.4% confidence)');
+  } else {
+    if (btn) {
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }
+    showToast('AI Detection Overlay disabled');
+  }
+}
+
+function captureSnapshot() {
+  playBeep(1200, 0.15);
+  const flash = document.createElement('div');
+  flash.style.position = 'fixed';
+  flash.style.inset = '0';
+  flash.style.background = '#fff';
+  flash.style.zIndex = '9999';
+  flash.style.opacity = '0.85';
+  flash.style.transition = 'opacity 0.25s ease';
+  document.body.appendChild(flash);
+  setTimeout(() => {
+    flash.style.opacity = '0';
+    setTimeout(() => flash.remove(), 250);
+  }, 50);
+
+  showToast('📸 Snapshot captured to Chamber 01 Log');
+}
+
+// Atmospheric Mist & Physics FX
 let fxCanvas = null;
 let fxCtx = null;
 let mistParticles = [];
 let fanActive = false;
 let mistActive = true;
-let mistDensity = 0.95; // 0.0 (crystal clear) to 1.0 (dense fog). Starts high.
+let mistDensity = 0.90; // 0.0 to 1.0
 
 function initChamberFX() {
   fxCanvas = document.getElementById('chamber-fx-canvas');
   if (!fxCanvas) return;
   fxCtx = fxCanvas.getContext('2d');
-  
+
   function resize() {
     if (fxCanvas) {
-      fxCanvas.width = fxCanvas.offsetWidth || 640;
-      fxCanvas.height = fxCanvas.offsetHeight || 360;
+      fxCanvas.width = fxCanvas.clientWidth || fxCanvas.offsetWidth || 640;
+      fxCanvas.height = fxCanvas.clientHeight || fxCanvas.offsetHeight || 360;
     }
   }
   resize();
   window.addEventListener('resize', resize);
-  
+
+  // Ensure live video starts playing smoothly
+  const vid = document.getElementById('chamber-video');
+  if (vid) {
+    vid.play().catch(() => {});
+  }
+
   function renderAtmosphere() {
     if (fxCtx && fxCanvas) {
+      if (fxCanvas.width === 0) resize();
       fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
 
       // --- MIST DYNAMICS ---
       // Mist stays hanging in the tent! It only clears when the fan is turned on!
       if (mistActive) {
         // Humidifier is ON: builds up dense fog
-        mistDensity = Math.min(1.0, mistDensity + 0.012);
+        mistDensity = Math.min(1.0, mistDensity + 0.015);
       } else if (fanActive) {
         // Ventilator is ON: exhausts and clears mist gradually over several seconds
         mistDensity = Math.max(0.0, mistDensity - 0.005);
       } else {
         // Both Humidifier & Fan are OFF: MIST LINGERS in the closed tent!
-        // Very slow natural settling, stays visibly hanging
-        mistDensity = Math.max(0.70, mistDensity - 0.00015);
+        mistDensity = Math.max(0.75, mistDensity - 0.0001);
       }
 
-      // Update image layer opacities dynamically
-      if (!envState.isHarvested) {
-        const lightActive = AppState.relays.light ? AppState.relays.light.active : true;
-        const imgBase = document.getElementById('chamber-img-base');
-        const imgMist = document.getElementById('chamber-img-mist');
-        const imgNight = document.getElementById('chamber-img-night');
-
-        if (imgMist && imgBase && imgNight) {
-          if (!lightActive) {
-            imgNight.style.opacity = '1';
-            imgMist.style.opacity = '0';
-            imgBase.style.opacity = '0';
-          } else {
-            imgNight.style.opacity = '0';
-            imgMist.style.opacity = mistDensity.toFixed(3);
-            imgBase.style.opacity = (1.0 - mistDensity * 0.85).toFixed(3);
-          }
-        }
+      // Atmospheric fog wash overlay over live video
+      if (mistDensity > 0.05) {
+        fxCtx.fillStyle = 'rgba(230, 245, 255, ' + (mistDensity * 0.28) + ')';
+        fxCtx.fillRect(0, 0, fxCanvas.width, fxCanvas.height);
       }
 
-      // Spawn floating mist particles proportional to current mistDensity
-      const targetParticleCount = Math.round(mistDensity * 70);
-      if (mistActive && mistParticles.length < targetParticleCount) {
+      // Spawn floating mist clouds while mist is present
+      const targetParticleCount = Math.round(mistDensity * 65);
+      if (mistDensity > 0.1 && mistParticles.length < targetParticleCount) {
         mistParticles.push({
           x: Math.random() * fxCanvas.width,
-          y: fxCanvas.height + 15,
-          vx: (Math.random() - 0.5) * 0.7,
-          vy: -(Math.random() * 1.1 + 0.4),
-          size: Math.random() * 55 + 35,
+          y: mistActive ? (fxCanvas.height + 15) : (Math.random() * fxCanvas.height),
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: -(Math.random() * 0.8 + 0.3),
+          size: Math.random() * 60 + 40,
           alpha: 0,
           maxAlpha: Math.random() * 0.35 + 0.15
         });
@@ -1684,19 +1761,19 @@ function initChamberFX() {
 
         if (fanActive) {
           // Fan ON: Mist accelerates upward into the exhaust vent!
-          p.vy -= 0.18;
-          p.vx += 0.14;
-          p.alpha -= 0.012;
+          p.vy -= 0.22;
+          p.vx += 0.18;
+          p.alpha -= 0.015;
         } else {
           // Fan OFF: Gentle suspension, hovering in place like real stagnant fog
-          p.vx += (Math.random() - 0.5) * 0.06;
-          p.vy = p.vy * 0.98 - 0.02; // slow hovering drift
-          p.alpha = Math.min(p.alpha + 0.008, p.maxAlpha * mistDensity);
+          p.vx += (Math.random() - 0.5) * 0.04;
+          p.vy = p.vy * 0.98 - 0.01;
+          p.alpha = Math.min(p.alpha + 0.01, p.maxAlpha * mistDensity);
         }
 
         p.x += p.vx;
         p.y += p.vy;
-        p.size += 0.2;
+        p.size += 0.15;
 
         if (p.y < -p.size || p.x > fxCanvas.width + p.size || p.alpha <= 0) {
           mistParticles.splice(i, 1);
@@ -1705,8 +1782,8 @@ function initChamberFX() {
 
         // Billowing fog puff
         const grad = fxCtx.createRadialGradient(p.x, p.y, p.size * 0.1, p.x, p.y, p.size);
-        grad.addColorStop(0, 'rgba(235, 250, 255, ' + (p.alpha * 0.75) + ')');
-        grad.addColorStop(0.5, 'rgba(215, 245, 255, ' + (p.alpha * 0.4) + ')');
+        grad.addColorStop(0, 'rgba(240, 250, 255, ' + (p.alpha * 0.75) + ')');
+        grad.addColorStop(0.5, 'rgba(220, 245, 255, ' + (p.alpha * 0.38) + ')');
         grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
         fxCtx.fillStyle = grad;
@@ -1726,27 +1803,28 @@ function updateChamberAtmosphere() {
   fanActive = AppState.relays.fan ? AppState.relays.fan.active : false;
   const lightActive = AppState.relays.light ? AppState.relays.light.active : true;
 
+  const lightOverlay = document.getElementById('chamber-light-overlay');
+  const video = document.getElementById('chamber-video');
   const resTag = document.getElementById('camera-res-tag');
-  if (resTag) {
-    if (!lightActive) resTag.innerText = 'IR NIGHT VISION • 60 FPS';
-    else if (fanActive) resTag.innerText = '4K HDR • EXHAUST FAE ACTIVE';
-    else if (mistActive) resTag.innerText = '4K HDR • ULTRASONIC FOG ACTIVE';
-    else resTag.innerText = '4K HDR • 60 FPS • LOCAL LAN';
+
+  if (!lightActive) {
+    if (lightOverlay) lightOverlay.style.background = 'rgba(2, 10, 6, 0.72)';
+    if (video) video.style.filter = 'brightness(0.6) contrast(1.2) hue-rotate(110deg) saturate(0.7)';
+    if (resTag) resTag.innerText = 'IR NIGHT VISION • 60 FPS';
+  } else {
+    if (lightOverlay) lightOverlay.style.background = 'transparent';
+    if (video) video.style.filter = 'brightness(1) contrast(1) hue-rotate(0deg) saturate(1)';
+    if (resTag) {
+      if (fanActive) resTag.innerText = '1080p • EXHAUST FAE ACTIVE';
+      else if (mistActive) resTag.innerText = '1080p • ULTRASONIC FOG ACTIVE';
+      else resTag.innerText = '1080p • 60 FPS • LOCAL LAN';
+    }
   }
 }
 
-// --- Environmental Physics Engine (Arden Buck Dynamic Psychrometrics) ---
-let envState = {
-  temp: 21.5,
-  rh: 90.2,
-  co2: 740,
-  isHarvested: false
-};
-
+// Environmental Telemetry Physics Ticker (Arden Buck Equation)
 function calculateArdenBuckVPD(tempC, rhPct) {
-  // Saturation vapor pressure in kPa
   const es = 0.61121 * Math.exp((18.678 - (tempC / 234.5)) * (tempC / (257.14 + tempC)));
-  // Actual vapor pressure in kPa
   const ea = es * (rhPct / 100);
   return Math.max(0, es - ea);
 }
@@ -1756,26 +1834,23 @@ function updateEnvironmentalPhysics() {
   const fanOn = AppState.relays.fan ? AppState.relays.fan.active : false;
   const heatOn = AppState.relays.heater ? AppState.relays.heater.active : false;
 
-  // Target equilibrium calculations
   let targetRH = 84.0;
   if (humOn) targetRH = 93.8;
-  if (fanOn) targetRH -= 5.5; // Fresh air removes humidity
+  if (fanOn) targetRH -= 5.5;
 
   let targetCO2 = 760;
-  if (fanOn) targetCO2 = 425; // Atmospheric fresh air exchange
-  else if (humOn) targetCO2 = 810; // Sealed humid chamber
+  if (fanOn) targetCO2 = 425;
+  else if (humOn) targetCO2 = 810;
 
   let targetTemp = 21.2;
   if (heatOn) targetTemp = 24.4;
 
-  // Smooth realistic sensor drift with slight micro-noise
   envState.rh += (targetRH - envState.rh) * 0.25 + (Math.random() - 0.5) * 0.08;
   envState.co2 += (targetCO2 - envState.co2) * 0.25 + (Math.random() - 0.5) * 4;
   envState.temp += (targetTemp - envState.temp) * 0.25 + (Math.random() - 0.5) * 0.04;
 
   const vpd = calculateArdenBuckVPD(envState.temp, envState.rh);
 
-  // Update Top Bar Strip
   const topTemp = document.getElementById('top-temp');
   if (topTemp) topTemp.innerText = envState.temp.toFixed(1) + '°C';
 
@@ -1788,7 +1863,6 @@ function updateEnvironmentalPhysics() {
   const topVPD = document.getElementById('top-vpd');
   if (topVPD) topVPD.innerText = vpd.toFixed(2);
 
-  // Update Telemetry Cards
   const mVPD = document.getElementById('metric-vpd');
   if (mVPD) {
     mVPD.innerText = vpd.toFixed(2);
@@ -1828,48 +1902,41 @@ function updateEnvironmentalPhysics() {
     }
   }
 }
-
-// Continuous physics loop every 900ms
 setInterval(updateEnvironmentalPhysics, 900);
 
-// --- Time-Lapse Growth Scrubber ---
+// Time-Lapse Growth Scrubber
 function scrubGrowth(day) {
   playBeep(600 + day * 30, 0.03);
   const label = document.getElementById('growth-scrubber-label');
   const d = parseInt(day);
 
   if (d <= 3) {
-    label.innerText = `Day ${d} • Mycelial Knotting`;
-    setChamberVisualMode('harvested'); // Shows early blocks / cut resting stage
+    if (label) label.innerText = 'Day ' + d + ' • Inoculation & Spawn';
+    setChamberVisualMode('harvested');
   } else if (d <= 7) {
-    label.innerText = `Day ${d} • Active Pinheads`;
+    if (label) label.innerText = 'Day ' + d + ' • Active Pinheads';
     setChamberVisualMode('harvested');
   } else if (d <= 11) {
-    label.innerText = `Day ${d} • Rapid Fruiting`;
+    if (label) label.innerText = 'Day ' + d + ' • Rapid Fruiting';
     setChamberVisualMode('base');
   } else {
-    label.innerText = `Day ${d} • Mature Flush`;
+    if (label) label.innerText = 'Day ' + d + ' • Mature Flush';
     setChamberVisualMode('base');
   }
 }
 
 function setChamberVisualMode(mode) {
-  const imgBase = document.getElementById('chamber-img-base');
-  const imgMist = document.getElementById('chamber-img-mist');
-  const imgNight = document.getElementById('chamber-img-night');
+  const video = document.getElementById('chamber-video');
   const imgHarvest = document.getElementById('chamber-img-harvest');
   const harvestBar = document.getElementById('chamber-harvest-bar');
 
-  if (!imgBase || !imgHarvest) return;
-
   if (mode === 'harvested') {
-    imgHarvest.style.opacity = '1';
-    imgBase.style.opacity = '0';
-    if (imgMist) imgMist.style.opacity = '0';
+    if (imgHarvest) imgHarvest.style.opacity = '1';
+    if (video) video.style.opacity = '0.15';
     if (harvestBar) harvestBar.style.display = 'flex';
   } else {
-    imgHarvest.style.opacity = '0';
-    imgBase.style.opacity = '1';
+    if (imgHarvest) imgHarvest.style.opacity = '0';
+    if (video) video.style.opacity = '1';
     if (harvestBar) harvestBar.style.display = 'none';
   }
 }
@@ -1877,12 +1944,9 @@ function setChamberVisualMode(mode) {
 function dunkAndRegrow() {
   playBeep(880, 0.1);
   showToast('💧 Substrate dunked & rehydrated! Primordia initializing for Flush 2...');
-  
-  // Cross-fade back to thriving mushrooms
   envState.isHarvested = false;
   setChamberVisualMode('base');
-  
-  // Re-add a batch to the list
+
   AppState.batches.unshift({
     id: 'LM-Flush2',
     strain: "Lion's Mane (Flush 2)",
@@ -1897,7 +1961,127 @@ function dunkAndRegrow() {
   renderBatches();
 }
 
-// Override harvestCurrentBatch to trigger camera transition & celebration modal
+// Batches Management
+function renderBatches() {
+  const container = document.getElementById('batches-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const badge = document.getElementById('nav-badge-batches');
+  if (badge) badge.innerText = AppState.batches.length;
+
+  AppState.batches.forEach(b => {
+    const radius = 24;
+    const circ = 2 * Math.PI * radius;
+    const offset = circ - (b.progress / 100) * circ;
+
+    const div = document.createElement('div');
+    div.className = 'batch-card';
+    div.onclick = (e) => {
+      if (e.target.tagName !== 'BUTTON') openBatchDetail(b.id);
+    };
+
+    div.innerHTML = `
+      <div class="batch-top">
+        <div>
+          <div class="batch-strain">${b.strain}</div>
+          <div class="batch-code">${b.code}</div>
+        </div>
+        <div class="batch-stage-badge">${b.stage}</div>
+      </div>
+      <div class="batch-progress-row">
+        <div class="progress-circle-wrap">
+          <svg viewBox="0 0 60 60">
+            <circle class="progress-circle-bg" cx="30" cy="30" r="${radius}"></circle>
+            <circle class="progress-circle-val" cx="30" cy="30" r="${radius}" style="stroke-dasharray: ${circ}; stroke-dashoffset: ${offset};"></circle>
+          </svg>
+          <div class="progress-text">${b.progress}%</div>
+        </div>
+        <div class="batch-details-list">
+          <div>Substrate: <strong>${b.substrate}</strong></div>
+          <div>Vessel: <strong>${b.vessel}</strong></div>
+          <div>Inoculation: <strong>Day ${b.days}</strong></div>
+        </div>
+      </div>
+      <div class="batch-actions-row">
+        <button class="batch-btn" onclick="openBatchDetail('${b.id}')">Inspect</button>
+        <button class="batch-btn harvest-btn" onclick="quickHarvest('${b.id}')">Harvest</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function openNewBatchModal() {
+  playBeep(700, 0.05);
+  document.getElementById('modal-new-batch').classList.add('active');
+}
+
+function handleNewBatchSubmit(e) {
+  e.preventDefault();
+  playBeep(920, 0.1);
+  const strain = document.getElementById('nb-strain').value;
+  const substrate = document.getElementById('nb-substrate').value;
+  const vessel = document.getElementById('nb-vessel').value;
+  const code = 'BATCH-' + Math.floor(100 + Math.random() * 900);
+
+  AppState.batches.unshift({
+    id: 'b-' + Date.now(),
+    strain: strain,
+    code: code,
+    stage: "Inoculated (Day 1)",
+    progress: 5,
+    substrate: substrate,
+    vessel: vessel,
+    days: 1
+  });
+
+  saveState();
+  renderBatches();
+  closeModals();
+  showToast('Inoculation Registered: ' + strain);
+}
+
+function openBatchDetail(id) {
+  playBeep(700, 0.04);
+  AppState.activeBatchId = id;
+  const b = AppState.batches.find(x => x.id === id);
+  if (!b) return;
+
+  document.getElementById('md-strain-title').innerText = b.strain;
+  document.getElementById('md-batch-code').innerText = b.code;
+  document.getElementById('md-substrate').innerText = b.substrate;
+  document.getElementById('md-vessel').innerText = b.vessel;
+  document.getElementById('md-stage').innerText = b.stage;
+  document.getElementById('md-progress-label').innerText = b.progress + '%';
+  document.getElementById('md-progress-slider').value = b.progress;
+
+  document.getElementById('modal-batch-detail').classList.add('active');
+}
+
+function updateBatchProgress(val) {
+  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
+  if (!b) return;
+  b.progress = parseInt(val);
+  document.getElementById('md-progress-label').innerText = val + '%';
+  saveState();
+  renderBatches();
+}
+
+function advanceBatchStage() {
+  const b = AppState.batches.find(x => x.id === AppState.activeBatchId);
+  if (!b) return;
+  if (b.stage.includes('Inoculated')) b.stage = 'Colonizing Substrate';
+  else if (b.stage.includes('Colonizing')) b.stage = 'Primordia Forming';
+  else if (b.stage.includes('Primordia')) b.stage = 'Ready for Harvest';
+  else b.stage = 'Flush Complete';
+
+  document.getElementById('md-stage').innerText = b.stage;
+  saveState();
+  renderBatches();
+  showToast('Advanced stage to: ' + b.stage);
+}
+
 function harvestCurrentBatch() {
   const b = AppState.batches.find(x => x.id === AppState.activeBatchId) || AppState.batches[0];
   if (!b) return;
@@ -1906,11 +2090,9 @@ function harvestCurrentBatch() {
   const freshG = Math.floor(620 + Math.random() * 240);
   const dryG = Math.round(freshG * 0.10);
 
-  // Cross-fade camera to harvested cut stems view!
   envState.isHarvested = true;
   setChamberVisualMode('harvested');
 
-  // Add to vault jars
   AppState.jars.unshift({
     id: 'j-' + Date.now(),
     strain: b.strain.split('(')[0].trim() + ' Dried (Flush 1)',
@@ -1920,24 +2102,306 @@ function harvestCurrentBatch() {
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Remove batch with smooth UI transition
   AppState.batches = AppState.batches.filter(x => x.id !== b.id);
   saveState();
   renderBatches();
   renderJars();
   closeModals();
 
-  // Show celebration modal
-  document.getElementById('harvest-modal-title').innerText = `${b.strain.split('(')[0]} Harvested!`;
-  document.getElementById('harvest-fresh-wt').innerText = `${freshG}g`;
-  document.getElementById('harvest-dry-wt').innerText = `${dryG}g`;
-  document.getElementById('harvest-vault-dest').innerText = `Jar #${b.code} • Stash & Vault Updated`;
-  document.getElementById('modal-harvest-celebrate').classList.add('active');
+  const mTitle = document.getElementById('harvest-modal-title');
+  if (mTitle) mTitle.innerText = b.strain.split('(')[0] + ' Harvested!';
+  const mFresh = document.getElementById('harvest-fresh-wt');
+  if (mFresh) mFresh.innerText = freshG + 'g';
+  const mDry = document.getElementById('harvest-dry-wt');
+  if (mDry) mDry.innerText = dryG + 'g';
+  const mDest = document.getElementById('harvest-vault-dest');
+  if (mDest) mDest.innerText = 'Jar #' + b.code + ' • Stash & Vault Updated';
 
-  showToast(`🎉 Harvested ${freshG}g fresh (${dryG}g dry) — resting blocks visible on optical camera!`);
+  const modal = document.getElementById('modal-harvest-celebrate');
+  if (modal) modal.classList.add('active');
+
+  showToast('🎉 Harvested ' + freshG + 'g fresh (' + dryG + 'g dry) — resting blocks visible on live camera!');
 }
 
-// Interactive LAN Subnet Discovery
+function quickHarvest(id) {
+  AppState.activeBatchId = id;
+  harvestCurrentBatch();
+}
+
+function deleteCurrentBatch() {
+  AppState.batches = AppState.batches.filter(x => x.id !== AppState.activeBatchId);
+  saveState();
+  renderBatches();
+  closeModals();
+  showToast('Batch removed from cultivation station.');
+}
+
+// Genetics Lab
+function renderGenetics(filter = 'all') {
+  const container = document.getElementById('genetics-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const list = filter === 'all' ? AppState.genetics : AppState.genetics.filter(g => g.type === filter);
+
+  list.forEach(g => {
+    const card = document.createElement('div');
+    card.className = 'batch-card';
+    card.innerHTML = `
+      <div class="batch-top">
+        <div>
+          <div class="batch-strain">${g.strain}</div>
+          <div class="batch-code">${g.gen} • ${g.date}</div>
+        </div>
+        <div class="batch-stage-badge" style="text-transform:uppercase;">${g.type}</div>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin:12px 0;">${g.desc}</p>
+      <div class="batch-actions-row">
+        <button class="batch-btn" onclick="showToast('Isolate ${g.strain} queued for transfer')">Subculture</button>
+        <button class="batch-btn harvest-btn" onclick="printQRModal('${g.strain}')">Print Tag</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function filterGenetics(type, btn) {
+  playBeep(800, 0.04);
+  document.querySelectorAll('#pane-genetics .lens-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderGenetics(type);
+}
+
+function openNewCultureModal() {
+  const name = prompt("Enter Culture / Strain Name:", "Lion's Mane P3 Aggressive");
+  if (!name) return;
+  AppState.genetics.unshift({
+    id: 'g-' + Date.now(),
+    strain: name,
+    type: 'agar',
+    desc: 'New agar sector transfer on MEA. Sterile laminar flow hood protocol.',
+    gen: 'P3 Transfer',
+    date: new Date().toISOString().split('T')[0]
+  });
+  saveState();
+  renderGenetics();
+  showToast('Logged culture transfer: ' + name);
+}
+
+// Stash & Stock Jars
+function renderJars() {
+  const container = document.getElementById('jars-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  let totalG = 0;
+  AppState.jars.forEach(j => {
+    totalG += j.grams;
+    const card = document.createElement('div');
+    card.className = 'batch-card';
+    card.innerHTML = `
+      <div class="batch-top">
+        <div>
+          <div class="batch-strain">${j.strain}</div>
+          <div class="batch-code">CURING JAR #${j.id.toUpperCase()}</div>
+        </div>
+        <div class="batch-stage-badge">${j.grams}g DRY</div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin:8px 0;">
+        Moisture: <strong>${j.moisture}%</strong> • Flushes Recorded: <strong>${j.flushes}</strong><br>
+        Pack Date: <strong>${j.date}</strong>
+      </div>
+      <div class="batch-actions-row">
+        <button class="batch-btn" onclick="adjustJar('${j.id}', -10)">-10g Use</button>
+        <button class="batch-btn" onclick="adjustJar('${j.id}', 50)">+50g Flush</button>
+        <button class="batch-btn harvest-btn" onclick="printQRModal('${j.strain}')">QR Tag</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  const vaultTotal = document.getElementById('vault-total-g');
+  if (vaultTotal) vaultTotal.innerText = totalG.toLocaleString();
+
+  const stashBadge = document.getElementById('nav-badge-stash');
+  if (stashBadge) stashBadge.innerText = (totalG / 1000).toFixed(2) + 'kg';
+}
+
+function adjustJar(id, delta) {
+  playBeep(delta > 0 ? 800 : 400, 0.05);
+  const j = AppState.jars.find(x => x.id === id);
+  if (!j) return;
+  j.grams = Math.max(0, j.grams + delta);
+  saveState();
+  renderJars();
+  showToast('Jar ' + j.strain + ' updated: ' + j.grams + 'g');
+}
+
+function openNewHarvestModal() {
+  const grams = prompt("Enter Fresh Wet Harvest Weight (grams):", "1200");
+  if (!grams) return;
+  const dryGrams = Math.round(parseInt(grams) * 0.09);
+  AppState.jars.unshift({
+    id: 'j-' + Date.now(),
+    strain: "Fresh Harvest Dried",
+    grams: dryGrams,
+    moisture: 7.0,
+    flushes: 1,
+    date: new Date().toISOString().split('T')[0]
+  });
+  saveState();
+  renderJars();
+  showToast('Logged harvest: ' + grams + 'g wet -> ' + dryGrams + 'g dried in vault!');
+}
+
+// Calculators
+function calculateCVG(coir) {
+  const display = document.getElementById('coir-weight-display');
+  if (display) display.innerText = coir + 'g (' + (coir / 650).toFixed(1) + ' standard bricks)';
+  const ratio = coir / 650;
+  const verm = Math.round(240 * ratio);
+  const gypsum = Math.round(75 * ratio);
+  const water = (3.25 * ratio).toFixed(2);
+
+  const cvgVerm = document.getElementById('cvg-verm');
+  if (cvgVerm) cvgVerm.innerText = verm + ' g (~' + Math.round(8 * ratio) + ' cups)';
+  const cvgGyp = document.getElementById('cvg-gypsum');
+  if (cvgGyp) cvgGyp.innerText = gypsum + ' g (~' + (0.5 * ratio).toFixed(1) + ' cups)';
+  const cvgWat = document.getElementById('cvg-water');
+  if (cvgWat) cvgWat.innerText = water + ' Liters';
+}
+
+function calcBE() {
+  const subEl = document.getElementById('be-sub-input');
+  const yldEl = document.getElementById('be-yield-input');
+  if (!subEl || !yldEl) return;
+  const sub = parseFloat(subEl.value) || 1;
+  const yld = parseFloat(yldEl.value) || 0;
+  const be = ((yld / sub) * 100).toFixed(1);
+
+  const res = document.getElementById('be-result');
+  if (res) res.innerText = be + '%';
+  const rating = document.getElementById('be-rating');
+  if (rating) {
+    if (be > 100) rating.innerText = '★ Commercial Elite Standard';
+    else if (be > 75) rating.innerText = '★ High Yield Harvest';
+    else rating.innerText = '● Standard Biological Efficiency';
+  }
+}
+
+// Pressure Cooker Sterilization Timer
+let timerInterval = null;
+let timerSeconds = 90 * 60;
+function toggleTimer() {
+  playBeep(880, 0.08);
+  const btn = document.getElementById('timer-toggle-btn');
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    if (btn) btn.innerText = 'Resume Timer';
+    showToast('Sterilization timer paused');
+  } else {
+    timerInterval = setInterval(() => {
+      timerSeconds--;
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        playBeep(1200, 0.5);
+        showToast('⏰ 15 PSI Sterilization Cycle Completed!');
+      }
+      updateTimerDisplay();
+    }, 1000);
+    if (btn) btn.innerText = 'Pause Timer';
+    showToast('Sterilization countdown active');
+  }
+}
+
+function resetTimer() {
+  if (timerInterval) clearInterval(timerInterval);
+  timerInterval = null;
+  timerSeconds = 90 * 60;
+  const btn = document.getElementById('timer-toggle-btn');
+  if (btn) btn.innerText = 'Start Timer';
+  updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+  const mins = Math.floor(timerSeconds / 60);
+  const secs = timerSeconds % 60;
+  const disp = document.getElementById('timer-display');
+  if (disp) {
+    disp.innerText = mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+  }
+}
+
+// Cleanroom Voice Assistant
+function openVoiceModal() {
+  playBeep(880, 0.06);
+  document.getElementById('modal-voice').classList.add('active');
+}
+
+function executeVoiceIntent(intent) {
+  playBeep(1000, 0.08);
+  const bubble = document.getElementById('voice-response-bubble');
+  let responseText = "";
+
+  if (intent === 'status') {
+    responseText = "Chamber 01 status nominal: Temperature " + envState.temp.toFixed(1) + "°C, Humidity " + envState.rh.toFixed(1) + "%, CO2 " + Math.round(envState.co2) + " PPM.";
+  } else if (intent === 'humidifier') {
+    toggleRelay('humidifier', true);
+    const sw = document.getElementById('switch-humidifier');
+    if (sw) sw.checked = true;
+    responseText = "Humidifier ultrasonic cycle engaged. Maintaining high humidity target.";
+  } else if (intent === 'vpd') {
+    const vpd = calculateArdenBuckVPD(envState.temp, envState.rh);
+    responseText = "Current Vapor Pressure Deficit is " + vpd.toFixed(2) + " kilopascals.";
+  } else if (intent === 'harvest') {
+    const total = AppState.jars.reduce((acc, x) => acc + x.grams, 0);
+    responseText = "Total vault inventory stands at " + total + " grams dried mushrooms across " + AppState.jars.length + " sealed jars.";
+  }
+
+  if (bubble) bubble.innerHTML = '<strong>Assistant:</strong> "' + responseText + '"';
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(responseText);
+    utter.rate = 1.05;
+    utter.pitch = 1.0;
+    window.speechSynthesis.speak(utter);
+  }
+}
+
+// Barcode & QR Scanner
+function openScannerModal() {
+  playBeep(700, 0.05);
+  document.getElementById('modal-scanner').classList.add('active');
+}
+
+function simulateQRScan(batchId) {
+  playBeep(1200, 0.12);
+  closeModals();
+  showToast('QR Recognized: [BATCH-' + batchId + "] Lion's Mane");
+  switchTab('dashboard');
+  setTimeout(() => openBatchDetail(batchId), 300);
+}
+
+function printQRModal(text) {
+  playBeep(700, 0.05);
+  const el = document.getElementById('qr-code-text');
+  if (el) el.innerText = text;
+  document.getElementById('modal-qr-print').classList.add('active');
+}
+
+function closeModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+}
+
+// Settings & LAN Scanner
+function testHubConnection() {
+  playBeep(880, 0.05);
+  showToast('Tuya Local Gateway: 0.42ms ping verified • LAN OK');
+}
+
 function scanLocalLANSubnet() {
   playBeep(700, 0.05);
   showToast('🔍 Scanning subnet 192.168.1.0/24 for Tuya Local & ESP32 nodes...');
@@ -1947,6 +2411,32 @@ function scanLocalLANSubnet() {
   }, 1200);
 }
 
+function triggerDecoyTest() {
+  playBeep(440, 0.1);
+  showToast('🔒 Decoy Mode simulated: Hiding proprietary vaults');
+}
+
+function resetDemoState() {
+  if (confirm("Reset all interactive data back to factory demo defaults?")) {
+    AppState = defaultState;
+    saveState();
+    renderBatches();
+    renderGenetics();
+    renderJars();
+    updateTotalPower();
+    showToast('Factory demo data restored');
+  }
+}
+
+// Init on DOMContentLoaded
+window.addEventListener('DOMContentLoaded', () => {
+  renderBatches();
+  renderGenetics();
+  renderJars();
+  updateTotalPower();
+  calcBE();
+  initChamberFX();
+});
 </script>
 
   <!-- Modal: Harvest Celebration -->
