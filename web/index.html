@@ -875,7 +875,15 @@
       .view-content { padding: 16px; }
       header.topbar { padding: 0 16px; }
     }
-  </style>
+  
+    @keyframes liveOpticsDrift {
+      0%   { transform: scale(1.0) translate(0px, 0px); }
+      25%  { transform: scale(1.012) translate(-1.5px, -1px); }
+      50%  { transform: scale(1.018) translate(1px, -1.8px); }
+      75%  { transform: scale(1.008) translate(2px, 1px); }
+      100% { transform: scale(1.0) translate(0px, 0px); }
+    }
+</style>
 </head>
 <body>
 
@@ -1016,28 +1024,39 @@
             <div class="card-header">
               <div class="card-title">
                 <span>📹</span>
-                <span>Chamber 01 • Live Optical Stream</span>
+                <span>Chamber 01 • Optical Cleanroom Feed</span>
               </div>
-              <span class="card-tag">WebRTC 60FPS</span>
+              <span class="card-tag">RTSP • 60 FPS</span>
             </div>
 
             <div class="camera-viewport" style="background:#05070a;position:relative;overflow:hidden;border-radius:var(--radius-md);aspect-ratio:16/9;">
-              <!-- 24/7 Live Optical Video Stream -->
-              <video id="chamber-video" src="assets/animycolab.mp4" autoplay loop muted playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 0.3s ease, filter 0.4s ease, opacity 0.5s ease;z-index:1;"></video>
-              
-              <!-- Harvested Cut Blocks Overlay (fades in when harvested) -->
-              <img id="chamber-img-harvest" src="assets/chamber_harvested.jpg" alt="Chamber Harvested" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity 0.6s ease, transform 0.3s ease;opacity:0;z-index:2;pointer-events:none;">
+              <!-- Master Camera Stream Viewport with Organic Sensor Drift & Optical Zoom -->
+              <div id="chamber-stream-wrapper" style="position:absolute;inset:0;width:100%;height:100%;animation:liveOpticsDrift 16s infinite ease-in-out;transform-origin:center center;transition:transform 0.3s ease;">
+                <!-- Layer 1: Base Grow Tent Interior (Photorealistic 4K Mushrooms & Racks) -->
+                <img id="chamber-img-base" src="assets/chamber_base.jpg" alt="Chamber 01 Base" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;">
+                
+                <!-- Layer 2: Ultrasonic Mist Photo Overlay (fades with mistDensity) -->
+                <img id="chamber-img-mist" src="assets/chamber_mist.jpg" alt="Chamber 01 Mist" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2;opacity:0.85;pointer-events:none;transition:opacity 0.25s ease;">
 
-              <!-- Night Vision Filter Overlay -->
-              <div id="chamber-light-overlay" style="position:absolute;inset:0;pointer-events:none;transition:background 0.4s ease;z-index:3;"></div>
+                <!-- Layer 3: Harvested Resting Blocks Overlay (fades in on harvest) -->
+                <img id="chamber-img-harvest" src="assets/chamber_harvested.jpg" alt="Chamber Harvested" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:3;opacity:0;pointer-events:none;transition:opacity 0.6s ease;">
 
-              <!-- Real-time Atmospheric Mist & Fog Canvas -->
-              <canvas id="chamber-fx-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;"></canvas>
+                <!-- Layer 4: Infrared Night-Vision CCTV Overlay (fades in when lights off) -->
+                <img id="chamber-img-night" src="assets/chamber_night.jpg" alt="Chamber Night Vision" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:4;opacity:0;pointer-events:none;transition:opacity 0.4s ease;">
+
+                <!-- Layer 5: Dynamic Swirling Fog Particle Canvas -->
+                <canvas id="chamber-fx-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5;"></canvas>
+              </div>
 
               <!-- Live HUD Overlay -->
-              <div class="camera-overlay" style="z-index:5;">
-                <div class="live-badge"><div class="rec-dot"></div> LIVE STREAM</div>
-                <div class="fps-badge" id="camera-res-tag">1080p • 60 FPS • LOCAL LAN</div>
+              <div class="camera-overlay" style="z-index:6;">
+                <div class="live-badge"><div class="rec-dot"></div> <span id="camera-live-status">LIVE STREAM</span></div>
+                <div class="fps-badge" id="camera-res-tag">4K HDR • 60 FPS • LOCAL LAN</div>
+              </div>
+
+              <!-- High-Tech Security RTSP Timestamp Ticker -->
+              <div id="camera-timestamp-tag" style="position:absolute;top:10px;right:10px;z-index:6;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(255,255,255,0.85);background:rgba(5,10,18,0.75);padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(6px);pointer-events:none;letter-spacing:0.5px;">
+                CAM-01 • LIVE
               </div>
 
               <!-- Resting / Dunk Flush 2 Banner -->
@@ -1047,7 +1066,7 @@
               </div>
 
               <!-- AI Primordia Bounding Boxes -->
-              <div class="ai-boxes-overlay" id="ai-boxes" style="z-index:6;">
+              <div class="ai-boxes-overlay" id="ai-boxes" style="z-index:8;">
                 <div class="ai-box" style="top:25%;left:28%;width:28%;height:32%;">
                   <span class="ai-box-label">🦁 Lion's Mane (H. erinaceus) 98.4%</span>
                 </div>
@@ -1641,11 +1660,8 @@ function setLens(scale, btn) {
   document.querySelectorAll('.lens-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   
-  const video = document.getElementById('chamber-video');
-  if (video) video.style.transform = 'scale(' + scale + ')';
-
-  const harvestImg = document.getElementById('chamber-img-harvest');
-  if (harvestImg) harvestImg.style.transform = 'scale(' + scale + ')';
+  const wrapper = document.getElementById('chamber-stream-wrapper');
+  if (wrapper) wrapper.style.transform = 'scale(' + scale + ')';
 
   showToast('Optical Zoom: ' + scale + 'x');
 }
@@ -1697,6 +1713,17 @@ let fanActive = false;
 let mistActive = true;
 let mistDensity = 0.90; // 0.0 to 1.0
 
+function updateCameraTimestamp() {
+  const el = document.getElementById('camera-timestamp-tag');
+  if (el) {
+    const now = new Date();
+    const dStr = now.toISOString().replace('T', ' ').substring(0, 19);
+    const ms = String(now.getMilliseconds()).padStart(3, '0');
+    el.innerText = `CAM-01 • ${dStr}.${ms} • 4,820 kbps`;
+  }
+  requestAnimationFrame(updateCameraTimestamp);
+}
+
 function initChamberFX() {
   fxCanvas = document.getElementById('chamber-fx-canvas');
   if (!fxCanvas) return;
@@ -1710,12 +1737,7 @@ function initChamberFX() {
   }
   resize();
   window.addEventListener('resize', resize);
-
-  // Ensure live video starts playing smoothly
-  const vid = document.getElementById('chamber-video');
-  if (vid) {
-    vid.play().catch(() => {});
-  }
+  updateCameraTimestamp();
 
   function renderAtmosphere() {
     if (fxCtx && fxCanvas) {
@@ -1735,9 +1757,15 @@ function initChamberFX() {
         mistDensity = Math.max(0.75, mistDensity - 0.0001);
       }
 
-      // Atmospheric fog wash overlay over live video
+      // Sync the photorealistic mist image layer opacity with physics
+      const mistImg = document.getElementById('chamber-img-mist');
+      if (mistImg) {
+        mistImg.style.opacity = (mistDensity * 0.92).toFixed(3);
+      }
+
+      // Atmospheric fog wash overlay
       if (mistDensity > 0.05) {
-        fxCtx.fillStyle = 'rgba(230, 245, 255, ' + (mistDensity * 0.28) + ')';
+        fxCtx.fillStyle = 'rgba(230, 245, 255, ' + (mistDensity * 0.22) + ')';
         fxCtx.fillRect(0, 0, fxCanvas.width, fxCanvas.height);
       }
 
@@ -1803,21 +1831,21 @@ function updateChamberAtmosphere() {
   fanActive = AppState.relays.fan ? AppState.relays.fan.active : false;
   const lightActive = AppState.relays.light ? AppState.relays.light.active : true;
 
-  const lightOverlay = document.getElementById('chamber-light-overlay');
-  const video = document.getElementById('chamber-video');
+  const nightImg = document.getElementById('chamber-img-night');
+  const liveStatus = document.getElementById('camera-live-status');
   const resTag = document.getElementById('camera-res-tag');
 
   if (!lightActive) {
-    if (lightOverlay) lightOverlay.style.background = 'rgba(2, 10, 6, 0.72)';
-    if (video) video.style.filter = 'brightness(0.6) contrast(1.2) hue-rotate(110deg) saturate(0.7)';
-    if (resTag) resTag.innerText = 'IR NIGHT VISION • 60 FPS';
+    if (nightImg) nightImg.style.opacity = '1';
+    if (liveStatus) liveStatus.innerText = 'IR NIGHT VISION STREAM';
+    if (resTag) resTag.innerText = 'IR 940nm • 60 FPS • SENSOR ON';
   } else {
-    if (lightOverlay) lightOverlay.style.background = 'transparent';
-    if (video) video.style.filter = 'brightness(1) contrast(1) hue-rotate(0deg) saturate(1)';
+    if (nightImg) nightImg.style.opacity = '0';
+    if (liveStatus) liveStatus.innerText = 'LIVE STREAM';
     if (resTag) {
-      if (fanActive) resTag.innerText = '1080p • EXHAUST FAE ACTIVE';
-      else if (mistActive) resTag.innerText = '1080p • ULTRASONIC FOG ACTIVE';
-      else resTag.innerText = '1080p • 60 FPS • LOCAL LAN';
+      if (fanActive) resTag.innerText = '4K HDR • EXHAUST FAE ACTIVE';
+      else if (mistActive) resTag.innerText = '4K HDR • ULTRASONIC FOG ACTIVE';
+      else resTag.innerText = '4K HDR • 60 FPS • LOCAL LAN';
     }
   }
 }
