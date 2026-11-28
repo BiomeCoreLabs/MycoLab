@@ -140,6 +140,13 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             
             store.recordSensorReading(tempC: temp, humidityPct: hum, co2Ppm: co2, source: "Webhook API")
             store.runAutopilotCycle()
+        } else if url.host?.lowercased() == "control" || url.host?.lowercased() == "device" {
+            store.checkPendingWidgetCommands()
+        } else if url.host?.lowercased() == "camera" || url.host?.lowercased() == "live" {
+            NotificationCenter.default.post(name: NSNotification.Name("MycoLabSwitchTab"), object: 0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                NotificationCenter.default.post(name: NSNotification.Name("MycoLabOpenLiveMonitor"), object: nil)
+            }
         }
     }
 }

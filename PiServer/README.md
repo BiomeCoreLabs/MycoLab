@@ -38,6 +38,28 @@ curl -sSL https://raw.githubusercontent.com/BiomeCoreLabs/MycoLabs/main/PiServer
 
 ---
 
+## 📡 LiveKit WebRTC Video Streaming Server (Port 7880)
+
+To install or update the LiveKit WebRTC streaming server on your Raspberry Pi:
+
+```bash
+sudo bash install_livekit.sh
+```
+or via one-liner:
+```bash
+curl -sSL https://raw.githubusercontent.com/BiomeCoreLabs/MycoLab/main/PiServer/install_livekit.sh | sudo bash
+```
+
+* **WebSocket URL for App**: `ws://<PI-IP>:7880` (e.g. `ws://192.168.50.115:7880`)
+* **API Key**: `mycolab_key`
+* **API Secret**: `mycolab_secret_lab_key_2026`
+* **Check LiveKit Service**:
+  ```bash
+  sudo systemctl status livekit-server.service
+  ```
+
+---
+
 ## 🛠️ Service Management
 
 * **Browser Status Check**:

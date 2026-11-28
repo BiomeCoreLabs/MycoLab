@@ -2670,7 +2670,7 @@ struct PreparationRecipeDetailSheetView: View {
         printController.printFormatter = formatter
         
         if let windowScene = UIApplication.shared.connectedScenes.first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
-           let rootVC = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController {
+           windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController != nil {
             printController.present(animated: true, completionHandler: nil)
         }
     }

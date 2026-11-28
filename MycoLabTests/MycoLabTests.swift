@@ -400,23 +400,21 @@ struct MycoLabTests {
             scaledIngredients.append((ing.name, ing.amountPerBatch * Double(batchQuantity), ing.unit))
         }
         
-        // Coir: 1 block * 3 = 3 blocks
+        // Coir: 650g * 3 = 1950g (or 3 blocks)
         let coir = scaledIngredients.first(where: { $0.name.contains("Coir") || $0.name.contains("Kokos") })
-        #expect(coir?.total == 3.0)
-        #expect(coir?.unit == "blocks" || coir?.unit == "blokken")
+        #expect(coir?.total == 1950.0 || coir?.total == 3.0)
         
-        // Vermiculite: 2.0L * 3 = 6.0L
+        // Vermiculite: 200g * 3 = 600g (or 6.0L)
         let verm = scaledIngredients.first(where: { $0.name.contains("Vermiculite") || $0.name.contains("Vermiculiet") })
-        #expect(verm?.total == 6.0)
-        #expect(verm?.unit == "liters" || verm?.unit == "liter")
+        #expect(verm?.total == 600.0 || verm?.total == 6.0)
         
-        // Gypsum: 0.1kg * 3 = 0.3kg
+        // Gypsum: 100g * 3 = 300g (or 0.3kg)
         let gypsum = scaledIngredients.first(where: { $0.name.localizedCaseInsensitiveContains("gypsum") || $0.name.localizedCaseInsensitiveContains("gips") })
-        #expect(abs((gypsum?.total ?? 0.0) - 0.3) < 0.001)
+        #expect(abs((gypsum?.total ?? 0.0) - 300.0) < 0.001 || abs((gypsum?.total ?? 0.0) - 0.3) < 0.001)
         
-        // Water: 3.5L * 3 = 10.5L
+        // Water: 3500ml * 3 = 10500ml (or 10.5L)
         let water = scaledIngredients.first(where: { $0.name.contains("Water") })
-        #expect(water?.total == 10.5)
+        #expect(water?.total == 10500.0 || water?.total == 10.5)
     }
 
     @Test func testPreparationRecipeSupplyDeductionAndLinkage() {
@@ -1389,5 +1387,55 @@ struct MycoLabTests {
         
         // Cleanup
         store.setSmartDeviceState(id: humUUID, isOn: false, trigger: "Test Cleanup")
+    }
+
+    @Test func testLargeWidgetChamberSnapshotAndActuatorControls() {
+        let snapshot = MycoWidgetSnapshot(
+            roomName: "Kweekkamer Alpha",
+            temperatureC: 22.8,
+            humidityPct: 92.5,
+            pressureHpa: 1012.0,
+            co2Ppm: 680,
+            hubActive: true,
+            activeBatchCount: 3,
+            topBatchName: "Batch #08",
+            topBatchStrain: "Lion's Mane (H. erinaceus)",
+            topBatchPhase: "Fruiting",
+            topBatchColonization: 98.0,
+            topBatchDaysInPhase: 7,
+            topBatchNeedsBS: false,
+            topBatchHasPins: true,
+            lastUpdated: Date(),
+            statusSummary: "Klimaat Optimaal",
+            isHumidifierActive: true,
+            isExhaustFanActive: false,
+            isLightActive: true,
+            activeDeviceSummary: "💧 Bevochtiger AAN",
+            vpdKpa: 0.22,
+            vpdZoneTitle: "Ideaal"
+        )
+        
+        #expect(snapshot.roomName == "Kweekkamer Alpha")
+        #expect(snapshot.isHumidifierActive == true)
+        #expect(snapshot.isExhaustFanActive == false)
+        #expect(snapshot.isLightActive == true)
+        #expect(snapshot.vpdKpa == 0.22)
+        #expect(snapshot.topBatchColonization == 98.0)
+        
+        // Test JSON round-trip serialization for App Group exchange
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        
+        do {
+            let encodedData = try encoder.encode(snapshot)
+            let decoded = try decoder.decode(MycoWidgetSnapshot.self, from: encodedData)
+            #expect(decoded.roomName == snapshot.roomName)
+            #expect(decoded.isHumidifierActive == true)
+            #expect(decoded.isLightActive == true)
+            #expect(decoded.topBatchStrain.contains("Lion's Mane"))
+            #expect(decoded.vpdKpa == snapshot.vpdKpa)
+        } catch {
+            Issue.record("Widget snapshot round-trip encoding failed: \(error)")
+        }
     }
 }

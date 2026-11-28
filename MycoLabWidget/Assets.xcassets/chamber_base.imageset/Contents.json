@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "chamber_base.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

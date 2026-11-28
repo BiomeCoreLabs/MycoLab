@@ -211,6 +211,14 @@ systemctl enable mycolab-hub.service
 systemctl restart mycolab-hub.service
 echo -e "${GREEN}✅ MycoLab Hub Service gestart op poort 8088.${NC}"
 
+# LiveKit WebRTC Streaming Server inrichten
+echo -e "${BLUE}=== LiveKit WebRTC Video Streaming Server inrichten ===${NC}"
+if [ -f "$TARGET_DIR/install_livekit.sh" ]; then
+    bash "$TARGET_DIR/install_livekit.sh" || true
+else
+    curl -fsSL https://raw.githubusercontent.com/BiomeCoreLabs/MycoLab/main/PiServer/install_livekit.sh -o "/tmp/install_livekit.sh" && bash "/tmp/install_livekit.sh" || true
+fi
+
 # Stroomuitval & SD-kaart bescherming
 if [[ "$ENABLE_SAFETY" =~ ^[jJyY]$ ]]; then
     echo -e "${BLUE}=== [6/6] Stroomuitval- en SD-kaartbescherming activeren ===${NC}"
@@ -251,11 +259,13 @@ echo -e "${BOLD}🎉 GEFELICITEERD! De MycoLab Autonomous Hub is succesvol geïn
 echo -e "${GREEN}==============================================================================${NC}"
 echo -e "📍 ${BOLD}Lokaal Netwerk IP:${NC}     http://${PI_IP}:8088"
 echo -e "🌐 ${BOLD}Tailscale Netwerk IP:${NC}  http://${TAIL_IP}:8088"
-echo -e "⚙️ ${BOLD}Achtergronddienst:${NC}     mycolab-hub.service (draait automatisch 24/7)"
+echo -e "📡 ${BOLD}LiveKit Stream URL:${NC}    ws://${PI_IP}:7880"
+echo -e "⚙️ ${BOLD}Achtergronddiensten:${NC}   mycolab-hub.service & livekit-server.service (24/7)"
 echo -e "💾 ${BOLD}USB Opslaglocatie:${NC}     /mnt/pi-storage (voor timelapses & backups)"
 echo ""
 echo -e "${CYAN}Stappen in de MycoLab App (iPhone / Mac):${NC}"
 echo -e "1. Open de MycoLab app en navigeer naar ${BOLD}Settings ➔ Tuya Hub${NC}."
 echo -e "2. Vul bij Hub IP in: ${BOLD}${TAIL_IP}${NC} (voor bereik overal) of ${BOLD}${PI_IP}${NC} (thuis)."
 echo -e "3. Poort: ${BOLD}8088${NC}."
+echo -e "4. LiveKit Video Server draait automatisch op poort ${BOLD}7880${NC}."
 echo -e "${GREEN}==============================================================================${NC}"

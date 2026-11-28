@@ -10,7 +10,7 @@ import Foundation
 import CryptoKit
 
 nonisolated public enum LiveKitTokenGenerator: Sendable {
-    public static let defaultServerUrl = "ws://192.168.1.100:7880"
+    public static let defaultServerUrl = "ws://192.168.50.115:7880"
     public static let defaultApiKey = "mycolab_key"
     public static let defaultApiSecret = "mycolab_secret_lab_key_2026"
     public static let defaultRoom = "mycolab-grow-room"
@@ -23,7 +23,18 @@ nonisolated public enum LiveKitTokenGenerator: Sendable {
 
     public static var currentServerUrl: String {
         let stored = UserDefaults.standard.string(forKey: keyServerUrl)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return stored.isEmpty ? defaultServerUrl : stored
+        // Auto-migrate away from obsolete default 192.168.1.100
+        if stored.contains("192.168.1.100") {
+            return defaultServerUrl
+        }
+        if !stored.isEmpty {
+            return stored
+        }
+        // Dynamically resolve to configured Pi IP in environment settings if set
+        if let customPiIP = UserDefaults.standard.string(forKey: "mycolab_pi_hub_ip")?.trimmingCharacters(in: .whitespacesAndNewlines), !customPiIP.isEmpty, !customPiIP.contains("192.168.1.100") {
+            return "ws://\(customPiIP):7880"
+        }
+        return defaultServerUrl
     }
 
     public static var currentApiKey: String {
@@ -68,9 +79,10 @@ nonisolated public enum LiveKitTokenGenerator: Sendable {
         UserDefaults.standard.removeObject(forKey: keyTokenEndpoint)
     }
 
-    public static func switchToPiLabHub() {
+    public static func switchToPiLabHub(ip: String? = nil) {
+        let targetIP = ip ?? "192.168.50.115"
         saveConfiguration(
-            serverUrl: defaultServerUrl,
+            serverUrl: "ws://\(targetIP):7880",
             apiKey: defaultApiKey,
             apiSecret: defaultApiSecret,
             room: defaultRoom

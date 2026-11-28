@@ -6738,7 +6738,7 @@ struct PiLabHubSettingsSheet: View {
                         Text(store.t(nl: "IP Adres", en: "IP Address"))
                             .foregroundColor(.white)
                         Spacer()
-                        TextField("192.168.1.100", text: $hubIP)
+                        TextField("192.168.50.115", text: $hubIP)
                             .multilineTextAlignment(.trailing)
                             .foregroundColor(MycoTheme.blue)
                             .keyboardType(.numbersAndPunctuation)
@@ -6758,6 +6758,16 @@ struct PiLabHubSettingsSheet: View {
                     
                     // Quick Preset Buttons
                     VStack(alignment: .leading, spacing: 6) {
+                        Button {
+                            hubIP = "192.168.50.115"
+                            hubPort = "8088"
+                        } label: {
+                            Text(store.t(nl: "🍓 Raspberry Pi Lab Hub (192.168.50.115)", en: "🍓 Raspberry Pi Lab Hub (192.168.50.115)"))
+                                .font(.caption.bold())
+                                .foregroundColor(MycoTheme.green)
+                        }
+                        .buttonStyle(.borderless)
+                        
                         Button {
                             hubIP = "192.168.1.100"
                             hubPort = "8088"

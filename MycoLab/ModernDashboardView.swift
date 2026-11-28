@@ -1602,6 +1602,9 @@ struct ModernDashboardTabView: View {
                 RemoteLabMonitorView()
                     .environmentObject(store)
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("MycoLabOpenLiveMonitor"))) { _ in
+                showRemoteMonitor = true
+            }
             .sheet(isPresented: $showSpaceCalculator) {
                 GrowSpaceSizeAndAIClimateView()
                     .environmentObject(store)

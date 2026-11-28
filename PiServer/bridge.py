@@ -655,6 +655,30 @@ def trigger_network_scan():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fout tijdens scan: {str(e)}")
 
+def check_livekit_online() -> bool:
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.3)
+        res = s.connect_ex(("127.0.0.1", 7880))
+        s.close()
+        return res == 0
+    except Exception:
+        return False
+
+@app.get("/livekit/status")
+def get_livekit_status():
+    online = check_livekit_online()
+    hub_ip = get_hub_ip()
+    return {
+        "status": "online" if online else "offline",
+        "online": online,
+        "port": 7880,
+        "server_url": f"ws://{hub_ip}:7880",
+        "api_key": "mycolab_key",
+        "room": "mycolab-grow-room"
+    }
+
 @app.get("/status")
 def get_hub_status():
     sched = load_schedules()
@@ -691,10 +715,18 @@ def get_hub_status():
         "latest_reading": CLIMATE_STATE["latest_reading"]
     }
 
+    livekit_on = check_livekit_online()
+    hub_ip = get_hub_ip()
     return {
         "status": "online",
         "hub": "Raspberry Pi 3B (Pi-Lab)",
-        "ip": get_hub_ip(),
+        "ip": hub_ip,
+        "livekit_online": livekit_on,
+        "livekit_server": {
+            "online": livekit_on,
+            "port": 7880,
+            "ws_url": f"ws://{hub_ip}:7880"
+        },
         "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "autopilot_active": sched.get("autopilot_enabled", True),
         "storage": storage_info,

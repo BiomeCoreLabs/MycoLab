@@ -9,6 +9,9 @@ import Foundation
 #if canImport(WidgetKit)
 import WidgetKit
 #endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 // MARK: - Shared Data Snapshot Model
 
@@ -35,6 +38,10 @@ public struct MycoWidgetSnapshot: Codable {
     public var activeDeviceSummary: String
     public var vpdKpa: Double
     public var vpdZoneTitle: String
+    public var isDemoMode: Bool
+    public var hasConfiguredCamera: Bool
+    public var isCameraConnected: Bool
+    public var cameraSnapshotDate: Date?
 
     public init(
         roomName: String = "Lab Alpha",
@@ -58,7 +65,11 @@ public struct MycoWidgetSnapshot: Codable {
         isLightActive: Bool = false,
         activeDeviceSummary: String = "Ruststand",
         vpdKpa: Double = 0.25,
-        vpdZoneTitle: String = "Ideaal"
+        vpdZoneTitle: String = "Ideaal",
+        isDemoMode: Bool = false,
+        hasConfiguredCamera: Bool = false,
+        isCameraConnected: Bool = false,
+        cameraSnapshotDate: Date? = nil
     ) {
         self.roomName = roomName
         self.temperatureC = temperatureC
@@ -82,6 +93,10 @@ public struct MycoWidgetSnapshot: Codable {
         self.activeDeviceSummary = activeDeviceSummary
         self.vpdKpa = vpdKpa
         self.vpdZoneTitle = vpdZoneTitle
+        self.isDemoMode = isDemoMode
+        self.hasConfiguredCamera = hasConfiguredCamera
+        self.isCameraConnected = isCameraConnected
+        self.cameraSnapshotDate = cameraSnapshotDate
     }
 
     public init(from decoder: Decoder) throws {
@@ -108,6 +123,10 @@ public struct MycoWidgetSnapshot: Codable {
         self.activeDeviceSummary = try c.decodeIfPresent(String.self, forKey: .activeDeviceSummary) ?? "Ruststand"
         self.vpdKpa = try c.decodeIfPresent(Double.self, forKey: .vpdKpa) ?? 0.25
         self.vpdZoneTitle = try c.decodeIfPresent(String.self, forKey: .vpdZoneTitle) ?? "Ideaal"
+        self.isDemoMode = try c.decodeIfPresent(Bool.self, forKey: .isDemoMode) ?? false
+        self.hasConfiguredCamera = try c.decodeIfPresent(Bool.self, forKey: .hasConfiguredCamera) ?? false
+        self.isCameraConnected = try c.decodeIfPresent(Bool.self, forKey: .isCameraConnected) ?? false
+        self.cameraSnapshotDate = try c.decodeIfPresent(Date.self, forKey: .cameraSnapshotDate)
     }
 
     public static var placeholder: MycoWidgetSnapshot {
@@ -133,6 +152,15 @@ final class MycoWidgetDataManager {
         return MycoWidgetSnapshot()
     }
 
+#if canImport(UIKit)
+    public static func saveCameraSnapshot(image: UIImage) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else { return }
+        let targetURL = containerURL.appendingPathComponent("latest_chamber_snapshot.jpg")
+        if let jpegData = image.jpegData(compressionQuality: 0.82) {
+            try? jpegData.write(to: targetURL, options: .atomic)
+        }
+    }
+#endif
 
     func updateSnapshot(
         from db: AppDatabase,
@@ -222,6 +250,40 @@ final class MycoWidgetDataManager {
         let computedVpd = vpdRes?.vpdKPa ?? 0.25
         let computedVpdTitle = vpdRes?.titleNL ?? "Ideaal (0.25 kPa)"
 
+        // Camera status computation
+        let isDemo = db.isDemoMode
+        let isCamLive = MycoCamStreamManager.shared.connectionState == .connected ||
+                        (MycoCamStreamManager.shared.role == .host) ||
+                        LiveKitStreamManager.shared.isConnected
+
+        let pairedCam = UserDefaults.standard.string(forKey: "mycolab_paired_camera_id") ?? ""
+        let hasCamera = !pairedCam.isEmpty ||
+                        !db.environmentConfig.effectiveRtspURL.isEmpty ||
+                        !db.environmentConfig.effectiveSnapshotURL.isEmpty ||
+                        db.timelapsePhotos.contains(where: { $0.hasPhotoData }) ||
+                        isCamLive
+
+        var snapshotDate: Date? = nil
+        #if canImport(UIKit)
+        if let liveFrame = MycoCamStreamManager.shared.receivedFrame ?? MycoCamStreamManager.shared.cloudFrame ?? LiveKitStreamManager.shared.lastRemoteSnapshot {
+            Self.saveCameraSnapshot(image: liveFrame)
+            snapshotDate = Date()
+        } else if let photoItem = db.timelapsePhotos.first(where: { $0.hasPhotoData }),
+                  let img = photoItem.loadImage() {
+            Self.saveCameraSnapshot(image: img)
+            snapshotDate = photoItem.timestamp
+        }
+        #endif
+
+        if snapshotDate == nil,
+           let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.appGroupID) {
+            let targetURL = containerURL.appendingPathComponent("latest_chamber_snapshot.jpg")
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: targetURL.path),
+               let modDate = attrs[.modificationDate] as? Date {
+                snapshotDate = modDate
+            }
+        }
+
         let snapshot = MycoWidgetSnapshot(
             roomName: db.environmentConfig.environmentName.isEmpty ? "Lab Alpha" : db.environmentConfig.environmentName,
             temperatureC: temp,
@@ -244,7 +306,11 @@ final class MycoWidgetDataManager {
             isLightActive: isLightOn,
             activeDeviceSummary: deviceSummary,
             vpdKpa: computedVpd,
-            vpdZoneTitle: computedVpdTitle
+            vpdZoneTitle: computedVpdTitle,
+            isDemoMode: isDemo,
+            hasConfiguredCamera: hasCamera,
+            isCameraConnected: isCamLive,
+            cameraSnapshotDate: snapshotDate
         )
 
         let defaults = UserDefaults(suiteName: Self.appGroupID) ?? UserDefaults.standard

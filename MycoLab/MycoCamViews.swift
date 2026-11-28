@@ -237,7 +237,8 @@ public enum ViewerStreamTransport: String, CaseIterable, Identifiable, Sendable 
         
         switch transport {
         case .liveKit:
-            p2pStreamManager.stopViewer()
+            pairingManager.startBrowsingForCameras()
+            p2pStreamManager.startViewer()
             Task {
                 await liveKitManager.startViewer(cameraId: pairingManager.pairedCameraId, forceFresh: true)
             }
@@ -249,6 +250,7 @@ public enum ViewerStreamTransport: String, CaseIterable, Identifiable, Sendable 
             p2pStreamManager.startViewer()
         case .auto:
             pairingManager.startBrowsingForCameras()
+            p2pStreamManager.startViewer()
             Task {
                 await liveKitManager.startViewer(cameraId: pairingManager.pairedCameraId, forceFresh: true)
             }
@@ -497,7 +499,8 @@ public enum ViewerStreamTransport: String, CaseIterable, Identifiable, Sendable 
         liveKitManager.isUserInitiatedStop = false
         switch currentTransport {
         case .liveKit:
-            p2pStreamManager.stopViewer()
+            pairingManager.startBrowsingForCameras()
+            p2pStreamManager.startViewer()
             Task {
                 await liveKitManager.startViewer(cameraId: pairingManager.pairedCameraId, forceFresh: forceFresh)
             }
@@ -966,8 +969,8 @@ public enum ViewerStreamTransport: String, CaseIterable, Identifiable, Sendable 
     private var cameraVideoDisplaySection: some View {
         let hasLiveKitVideo = liveKitManager.remoteVideoTrack != nil
         let hasP2PVideo = p2pStreamManager.receivedFrame != nil
-        let showP2PFeed = (currentTransport == .p2p && hasP2PVideo) || (currentTransport == .auto && !hasLiveKitVideo && hasP2PVideo)
         let showLiveKitFeed = (currentTransport == .liveKit && hasLiveKitVideo) || (currentTransport == .auto && hasLiveKitVideo)
+        let showP2PFeed = (currentTransport == .p2p && hasP2PVideo) || (!hasLiveKitVideo && hasP2PVideo)
         
         GeometryReader { geo in
             ZStack {

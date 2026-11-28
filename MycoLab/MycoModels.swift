@@ -1871,15 +1871,18 @@ struct GrowEnvironmentConfig: Codable, Hashable {
     var minBatteryAlertThresholdPct: Int = 15 { didSet { lastModifiedAt = Date() } }
     
         // Raspberry Pi Lab Hub 24/7 Autonomy
-    var piHubIP: String? = "192.168.1.100" { didSet { lastModifiedAt = Date() } }
+    var piHubIP: String? = "192.168.50.115" { didSet { lastModifiedAt = Date() } }
     var piHubPort: Int? = 8088 { didSet { lastModifiedAt = Date() } }
     var piHubAutonomousActive: Bool? = true { didSet { lastModifiedAt = Date() } }
     var lastPiHubSyncTime: Date? = nil
     var piHubSyncStatusMessage: String? = ""
     
     var effectivePiHubIP: String {
-        let ip = (piHubIP ?? "192.168.1.100").trimmingCharacters(in: .whitespacesAndNewlines)
-        return ip.isEmpty ? "192.168.1.100" : ip
+        let ip = (piHubIP ?? "192.168.50.115").trimmingCharacters(in: .whitespacesAndNewlines)
+        if ip.isEmpty || ip == "192.168.1.100" {
+            return "192.168.50.115"
+        }
+        return ip
     }
     
     var effectivePiHubPort: Int {
@@ -2207,6 +2210,13 @@ struct TimelapsePhotoItem: Identifiable, Codable, Hashable {
         let highResJpeg = image.jpegData(compressionQuality: 1.0)
         if let data = highResJpeg {
             try? data.write(to: fileURL)
+        }
+        // Exporteer direct naar gedeelde App Group container voor widget weergave
+        if let groupContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.mycolab.app") {
+            let widgetSnapURL = groupContainer.appendingPathComponent("latest_chamber_snapshot.jpg")
+            if let groupData = image.jpegData(compressionQuality: 0.82) {
+                try? groupData.write(to: widgetSnapURL, options: .atomic)
+            }
         }
         
         // Compacte preview data (< 40KB) die moeiteloos syncet via iCloud KVS en Multipeer P2P

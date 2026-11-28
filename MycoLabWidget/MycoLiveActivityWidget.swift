@@ -5,6 +5,7 @@
 //  ActivityKit Live Activity widget supporting Dynamic Island and Lock Screen.
 //
 
+#if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
 import ActivityKit
 import WidgetKit
 import SwiftUI
@@ -239,3 +240,4 @@ public struct MycoLiveActivityWidget: Widget {
         .background(Color(red: 0.08, green: 0.10, blue: 0.15))
     }
 }
+#endif

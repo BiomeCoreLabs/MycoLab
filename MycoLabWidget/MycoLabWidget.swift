@@ -7,6 +7,7 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
 
 // MARK: - Shared Data Snapshot Model
 
@@ -33,6 +34,10 @@ public struct MycoWidgetSnapshot: Codable {
     public var activeDeviceSummary: String
     public var vpdKpa: Double
     public var vpdZoneTitle: String
+    public var isDemoMode: Bool
+    public var hasConfiguredCamera: Bool
+    public var isCameraConnected: Bool
+    public var cameraSnapshotDate: Date?
 
     public init(
         roomName: String = "Lab Alpha",
@@ -56,7 +61,11 @@ public struct MycoWidgetSnapshot: Codable {
         isLightActive: Bool = false,
         activeDeviceSummary: String = "Standby",
         vpdKpa: Double = 0.25,
-        vpdZoneTitle: String = "Ideal"
+        vpdZoneTitle: String = "Ideal",
+        isDemoMode: Bool = false,
+        hasConfiguredCamera: Bool = false,
+        isCameraConnected: Bool = false,
+        cameraSnapshotDate: Date? = nil
     ) {
         self.roomName = roomName
         self.temperatureC = temperatureC
@@ -80,6 +89,10 @@ public struct MycoWidgetSnapshot: Codable {
         self.activeDeviceSummary = activeDeviceSummary
         self.vpdKpa = vpdKpa
         self.vpdZoneTitle = vpdZoneTitle
+        self.isDemoMode = isDemoMode
+        self.hasConfiguredCamera = hasConfiguredCamera
+        self.isCameraConnected = isCameraConnected
+        self.cameraSnapshotDate = cameraSnapshotDate
     }
 
     public init(from decoder: Decoder) throws {
@@ -106,6 +119,10 @@ public struct MycoWidgetSnapshot: Codable {
         self.activeDeviceSummary = try c.decodeIfPresent(String.self, forKey: .activeDeviceSummary) ?? "Standby"
         self.vpdKpa = try c.decodeIfPresent(Double.self, forKey: .vpdKpa) ?? 0.25
         self.vpdZoneTitle = try c.decodeIfPresent(String.self, forKey: .vpdZoneTitle) ?? "Ideal"
+        self.isDemoMode = try c.decodeIfPresent(Bool.self, forKey: .isDemoMode) ?? false
+        self.hasConfiguredCamera = try c.decodeIfPresent(Bool.self, forKey: .hasConfiguredCamera) ?? false
+        self.isCameraConnected = try c.decodeIfPresent(Bool.self, forKey: .isCameraConnected) ?? false
+        self.cameraSnapshotDate = try c.decodeIfPresent(Date.self, forKey: .cameraSnapshotDate)
     }
 
     public static var placeholder: MycoWidgetSnapshot {
@@ -658,6 +675,1095 @@ struct MediumHomeScreenWidgetView: View {
     }
 }
 
+
+
+// MARK: - Viewfinder HUD Brackets
+
+struct ViewfinderBrackets: View {
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let b: CGFloat = 8
+            Path { p in
+                // Top-Left
+                p.move(to: CGPoint(x: 4, y: 4 + b))
+                p.addLine(to: CGPoint(x: 4, y: 4))
+                p.addLine(to: CGPoint(x: 4 + b, y: 4))
+                // Top-Right
+                p.move(to: CGPoint(x: w - 4 - b, y: 4))
+                p.addLine(to: CGPoint(x: w - 4, y: 4))
+                p.addLine(to: CGPoint(x: w - 4, y: 4 + b))
+                // Bottom-Left
+                p.move(to: CGPoint(x: 4, y: h - 4 - b))
+                p.addLine(to: CGPoint(x: 4, y: h - 4))
+                p.addLine(to: CGPoint(x: 4 + b, y: h - 4))
+                // Bottom-Right
+                p.move(to: CGPoint(x: w - 4 - b, y: h - 4))
+                p.addLine(to: CGPoint(x: w - 4, y: h - 4))
+                p.addLine(to: CGPoint(x: w - 4, y: h - 4 - b))
+            }
+            .stroke(Color.white.opacity(0.25), lineWidth: 1.2)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Chamber Optical View & Interactive Room Controls (Large & ExtraLarge)
+
+struct ChamberOpticalView: View {
+    let snapshot: MycoWidgetSnapshot
+    let isCompact: Bool
+
+    // 1. Laad echte snapshot uit de gedeelde App Group container
+    private var realSnapshotImage: UIImage? {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.mycolab.app") else {
+            return nil
+        }
+        let targetURL = containerURL.appendingPathComponent("latest_chamber_snapshot.jpg")
+        guard let data = try? Data(contentsOf: targetURL),
+              let uiImage = UIImage(data: data) else {
+            return nil
+        }
+        return uiImage
+    }
+
+    private var demoImageName: String {
+        if snapshot.isHumidifierActive {
+            return "chamber_mist"
+        } else if !snapshot.isLightActive {
+            return "chamber_night"
+        } else {
+            return "chamber_base"
+        }
+    }
+
+    var body: some View {
+        Link(destination: URL(string: "mycolab://camera")!) {
+            content
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.15), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if snapshot.isDemoMode {
+            // MARK: - STATE 1: DEMO MODUS (Gesimuleerde beelden)
+            demoChamberView
+        } else if !snapshot.hasConfiguredCamera {
+            // MARK: - STATE 2: GEEN CAMERA VERBONDEN (Geen foto)
+            noCameraView
+        } else if snapshot.isCameraConnected {
+            // MARK: - STATE 3: CAMERA LIVE VERBONDEN (Geen foto)
+            liveStreamActiveView
+        } else {
+            // MARK: - STATE 4: CAMERA OFFLINE / STANDBY (Echte livestream foto)
+            offlineSnapshotView
+        }
+    }
+
+    // MARK: - 1. Demo Mode View
+    private var demoChamberView: some View {
+        ZStack {
+            Image(demoImageName)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+
+            if snapshot.isHumidifierActive {
+                Color.cyan.opacity(0.12)
+            } else if !snapshot.isLightActive {
+                Color.blue.opacity(0.18)
+            }
+
+            ViewfinderBrackets()
+
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.black.opacity(0.75),
+                    Color.black.opacity(0.05),
+                    Color.black.opacity(0.20),
+                    Color.black.opacity(0.85)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            VStack(spacing: 0) {
+                HStack(alignment: .center) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundColor(.yellow)
+                        Text("DEMO MODUS")
+                            .font(.system(size: 8, weight: .black, design: .monospaced))
+                            .foregroundColor(.yellow)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.75))
+                    .clipShape(Capsule())
+
+                    Spacer()
+
+                    Text("VIRTUEEL LAB • SIMULATIE")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(Color.cyan)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.75))
+                        .clipShape(Capsule())
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
+
+                Spacer(minLength: 2)
+
+                HStack {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 8))
+                            .foregroundColor(.green)
+                        Text("🍄 \(snapshot.topBatchStrain) (\(Int(round(snapshot.topBatchColonization)))%)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.75))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.green.opacity(0.6), lineWidth: 1))
+                    .cornerRadius(6)
+
+                    Spacer()
+
+                    if snapshot.isHumidifierActive {
+                        HStack(spacing: 3) {
+                            Circle().fill(Color.cyan).frame(width: 5, height: 5)
+                            Text("MIST")
+                                .font(.system(size: 8, weight: .black, design: .monospaced))
+                                .foregroundColor(.cyan)
+                        }
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.cyan.opacity(0.2))
+                        .cornerRadius(4)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 4)
+
+                telemetryStrip
+            }
+        }
+    }
+
+    // MARK: - 2. Geen Camera Verbonden View (Geen foto)
+    private var noCameraView: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.05, green: 0.07, blue: 0.12),
+                    Color(red: 0.02, green: 0.04, blue: 0.07)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            ViewfinderBrackets()
+
+            VStack(spacing: 0) {
+                HStack {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(Color.gray.opacity(0.8))
+                            .frame(width: 6, height: 6)
+                        Text("GEEN CAMERA")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.55))
+                    .clipShape(Capsule())
+
+                    Spacer()
+
+                    Text("KWEEKBEWAKING STANDBY")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(.gray)
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
+
+                Spacer(minLength: 2)
+
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.white.opacity(0.06))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: "camera.badge.ellipsis")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Geen camera verbonden")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        Text("Koppel een camera om live mee te kijken")
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(spacing: 3) {
+                        Image(systemName: "qrcode.viewfinder")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("Koppel")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .foregroundColor(.cyan)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.cyan.opacity(0.15))
+                    .cornerRadius(6)
+                }
+                .padding(.horizontal, 10)
+
+                Spacer(minLength: 2)
+
+                telemetryStrip
+            }
+        }
+    }
+
+    // MARK: - 3. Live Stream Actief View (Geen foto)
+    private var liveStreamActiveView: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.02, green: 0.13, blue: 0.15),
+                    Color(red: 0.01, green: 0.04, blue: 0.08)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            ViewfinderBrackets()
+
+            VStack(spacing: 0) {
+                HStack(alignment: .center) {
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 6, height: 6)
+                        Text("LIVE VERBONDEN")
+                            .font(.system(size: 8, weight: .black, design: .monospaced))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.red.opacity(0.35))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(Color.red.opacity(0.6), lineWidth: 1))
+
+                    Spacer()
+
+                    Text("WEBRTC • LIVE FEED")
+                        .font(.system(size: 8, weight: .bold, design: .monospaced))
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Capsule())
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
+
+                Spacer(minLength: 2)
+
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.green.opacity(0.2))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "video.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.green)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Live meekijken beschikbaar")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .foregroundColor(.white)
+                        Text("Ultra-lage latentie kweekbeeld")
+                            .font(.system(size: 9))
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Spacer(minLength: 0)
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text("Kijk Live")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.35))
+                    .cornerRadius(6)
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.green.opacity(0.6), lineWidth: 1))
+                }
+                .padding(.horizontal, 10)
+
+                Spacer(minLength: 2)
+
+                telemetryStrip
+            }
+        }
+    }
+
+    // MARK: - 4. Offline / Standby View (Toont laatste foto van de echte livestream)
+    private var offlineSnapshotView: some View {
+        ZStack {
+            if let realImg = realSnapshotImage {
+                Image(uiImage: realImg)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+
+                ViewfinderBrackets()
+
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.black.opacity(0.75),
+                        Color.black.opacity(0.08),
+                        Color.black.opacity(0.20),
+                        Color.black.opacity(0.85)
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+
+                VStack {
+                    HStack(alignment: .center) {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(Color.orange)
+                                .frame(width: 6, height: 6)
+                            Text("OFFLINE • LAATSTE FOTO")
+                                .font(.system(size: 8, weight: .black, design: .monospaced))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.75))
+                        .clipShape(Capsule())
+
+                        Spacer()
+
+                        Text("LAATSTE LIVESTREAM OPNAME")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.black.opacity(0.75))
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.top, 6)
+
+                    Spacer(minLength: 2)
+
+                    HStack {
+                        HStack(spacing: 4) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 8))
+                                .foregroundColor(.cyan)
+                            Text("Tik voor live monitor")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.75))
+                        .cornerRadius(6)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+
+                    telemetryStrip
+                }
+            } else {
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.05, green: 0.06, blue: 0.10),
+                            Color(red: 0.02, green: 0.03, blue: 0.06)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+
+                    ViewfinderBrackets()
+
+                    VStack(spacing: 0) {
+                        HStack {
+                            HStack(spacing: 5) {
+                                Circle().fill(Color.orange).frame(width: 6, height: 6)
+                                Text("CAMERA STANDBY")
+                                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.black.opacity(0.6))
+                            .clipShape(Capsule())
+
+                            Spacer()
+
+                            Text("OFFLINE")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundColor(.orange)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.top, 6)
+
+                        Spacer(minLength: 2)
+
+                        HStack(spacing: 10) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.white.opacity(0.06))
+                                    .frame(width: 34, height: 34)
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.orange)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Camera offline")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                Text("Wachten op eerste livestream snapshot")
+                                    .font(.system(size: 9))
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, 10)
+
+                        Spacer(minLength: 2)
+
+                        telemetryStrip
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Telemetry Strip
+    private var telemetryStrip: some View {
+        HStack(spacing: 8) {
+            Label(String(format: "%.1f°C", snapshot.temperatureC), systemImage: "thermometer.medium")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.white)
+
+            Divider().frame(height: 10).background(Color.white.opacity(0.2))
+
+            Label("\(Int(round(snapshot.humidityPct)))%", systemImage: "drop.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(Color.cyan)
+
+            Divider().frame(height: 10).background(Color.white.opacity(0.2))
+
+            Label("VPD \(String(format: "%.2f", snapshot.vpdKpa))", systemImage: "gauge.with.dots.needle.bottom.50percent")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(Color.green)
+
+            Spacer(minLength: 0)
+
+            Text("\(snapshot.co2Ppm) ppm")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundColor(Color.gray)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.black.opacity(0.85))
+    }
+}
+
+// MARK: - Dedicated Climate Metric Tile
+
+struct ClimateMetricTile: View {
+    let icon: String
+    let label: String
+    let value: String
+    let unit: String
+    let tint: Color
+    var subtext: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(tint)
+                Text(label)
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundColor(Color.gray)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(tint)
+                }
+            }
+            if let sub = subtext {
+                Text(sub)
+                    .font(.system(size: 7, weight: .semibold))
+                    .foregroundColor(tint.opacity(0.85))
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(7)
+        .overlay(
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(tint.opacity(0.22), lineWidth: 1)
+        )
+    }
+}
+
+struct ActuatorButtonTile: View {
+    let title: String
+    let icon: String
+    let isActive: Bool
+    let activeColor: Color
+    var subtitle: String? = nil
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 9)
+                .fill(isActive ? activeColor.opacity(0.22) : Color.white.opacity(0.06))
+
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(isActive ? activeColor.opacity(0.8) : Color.white.opacity(0.12), lineWidth: 1)
+
+            VStack(spacing: 2) {
+                ZStack {
+                    Circle()
+                        .fill(isActive ? activeColor.opacity(0.3) : Color.white.opacity(0.05))
+                        .frame(width: 20, height: 20)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(isActive ? activeColor : Color.gray)
+                }
+
+                Text(title)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(isActive ? .white : Color.gray)
+                    .lineLimit(1)
+
+                Text(subtitle ?? (isActive ? "AAN" : "UIT"))
+                    .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                    .foregroundColor(isActive ? activeColor : Color.gray.opacity(0.7))
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 3)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 48)
+    }
+}
+
+struct RoomControlQuickDock: View {
+    let snapshot: MycoWidgetSnapshot
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("RUIMTE BEDIENING")
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .foregroundColor(Color.gray)
+                Spacer()
+                Text(snapshot.activeDeviceSummary)
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundColor(Color.cyan)
+                    .lineLimit(1)
+            }
+
+            HStack(spacing: 5) {
+                // Button 1: Bevochtiger (Mist)
+                if #available(iOS 17.0, macOS 14.0, *) {
+                    Button(intent: ToggleHumidifierIntent()) {
+                        ActuatorButtonTile(
+                            title: "Mist",
+                            icon: "drop.fill",
+                            isActive: snapshot.isHumidifierActive,
+                            activeColor: .cyan
+                        )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Link(destination: URL(string: "mycolab://control?device=humidifier&action=toggle")!) {
+                        ActuatorButtonTile(
+                            title: "Mist",
+                            icon: "drop.fill",
+                            isActive: snapshot.isHumidifierActive,
+                            activeColor: .cyan
+                        )
+                    }
+                }
+
+                // Button 2: Ventilatie (Afzuiger / FAE)
+                if #available(iOS 17.0, macOS 14.0, *) {
+                    Button(intent: ToggleExhaustFanIntent()) {
+                        ActuatorButtonTile(
+                            title: "Afzuig",
+                            icon: "wind",
+                            isActive: snapshot.isExhaustFanActive,
+                            activeColor: Color(red: 0.2, green: 0.6, blue: 1.0)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Link(destination: URL(string: "mycolab://control?device=fan&action=toggle")!) {
+                        ActuatorButtonTile(
+                            title: "Afzuig",
+                            icon: "wind",
+                            isActive: snapshot.isExhaustFanActive,
+                            activeColor: Color(red: 0.2, green: 0.6, blue: 1.0)
+                        )
+                    }
+                }
+
+                // Button 3: Kweeklamp
+                if #available(iOS 17.0, macOS 14.0, *) {
+                    Button(intent: ToggleGrowLightIntent()) {
+                        ActuatorButtonTile(
+                            title: "Lamp",
+                            icon: "lightbulb.fill",
+                            isActive: snapshot.isLightActive,
+                            activeColor: Color.yellow
+                        )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Link(destination: URL(string: "mycolab://control?device=light&action=toggle")!) {
+                        ActuatorButtonTile(
+                            title: "Lamp",
+                            icon: "lightbulb.fill",
+                            isActive: snapshot.isLightActive,
+                            activeColor: Color.yellow
+                        )
+                    }
+                }
+
+                // Button 4: Verse Lucht Pulse
+                if #available(iOS 17.0, macOS 14.0, *) {
+                    Button(intent: TriggerFaePulseIntent()) {
+                        ActuatorButtonTile(
+                            title: "Pulse",
+                            icon: "fanblades.fill",
+                            isActive: false,
+                            activeColor: Color.green,
+                            subtitle: "60s"
+                        )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Link(destination: URL(string: "mycolab://control?device=fan_pulse&action=trigger")!) {
+                        ActuatorButtonTile(
+                            title: "Pulse",
+                            icon: "fanblades.fill",
+                            isActive: false,
+                            activeColor: Color.green,
+                            subtitle: "60s"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Large Home Screen Widget (iPhone, iPad & Mac)
+
+struct LargeHomeScreenWidgetView: View {
+    let snapshot: MycoWidgetSnapshot
+
+    var body: some View {
+        VStack(spacing: 6) {
+            // 1. Top Header Row
+            HStack(alignment: .center) {
+                HStack(spacing: 5) {
+                    Text("🍄 MYCOLAB")
+                        .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.cyan)
+                    Text("•")
+                        .foregroundColor(.gray)
+                    Text(snapshot.roomName)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(snapshot.hubActive ? Color.green : Color.gray)
+                        .frame(width: 6, height: 6)
+                    Text(snapshot.hubActive ? "24/7 HUB LIVE" : "STANDBY")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(snapshot.hubActive ? .green : .gray)
+                }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Color.white.opacity(0.06))
+                .clipShape(Capsule())
+            }
+
+            // 2. Kweekkamer Optical Feed Viewport
+            ChamberOpticalView(snapshot: snapshot, isCompact: false)
+                .frame(height: 136)
+
+            // 3. Dedicated 4-Metric Climate Telemetry Grid (Zero wasted space!)
+            HStack(spacing: 5) {
+                ClimateMetricTile(
+                    icon: "thermometer.medium",
+                    label: "TEMP",
+                    value: String(format: "%.1f", snapshot.temperatureC),
+                    unit: "°C",
+                    tint: .orange,
+                    subtext: "Doel 23°"
+                )
+
+                ClimateMetricTile(
+                    icon: "drop.fill",
+                    label: "VOCHT",
+                    value: "\(Int(round(snapshot.humidityPct)))",
+                    unit: "%",
+                    tint: .cyan,
+                    subtext: "Optimaal"
+                )
+
+                ClimateMetricTile(
+                    icon: "gauge.with.dots.needle.bottom.50percent",
+                    label: "VPD",
+                    value: String(format: "%.2f", snapshot.vpdKpa),
+                    unit: "kPa",
+                    tint: .green,
+                    subtext: "Goud Zone"
+                )
+
+                ClimateMetricTile(
+                    icon: "wind",
+                    label: "CO2",
+                    value: "\(snapshot.co2Ppm)",
+                    unit: "ppm",
+                    tint: Color(red: 0.6, green: 0.7, blue: 0.9),
+                    subtext: "Fris / FAE"
+                )
+            }
+
+            // 4. Actuator Quick Dock
+            RoomControlQuickDock(snapshot: snapshot)
+
+            // 5. Active Batch & Cultivation Status Card (Bottom Ribbon)
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 4) {
+                        Text(snapshot.topBatchName.isEmpty ? "Geen actieve batch" : snapshot.topBatchName)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        if !snapshot.topBatchStrain.isEmpty {
+                            Text("•")
+                                .foregroundColor(.gray)
+                            Text(snapshot.topBatchStrain)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundColor(.cyan)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        Text("\(Int(round(snapshot.topBatchColonization)))% Kolonisatie")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(.green)
+                    }
+
+                    // Progress bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.12))
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.cyan, .green],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(width: max(4, geo.size.width * CGFloat(snapshot.topBatchColonization / 100.0)))
+                        }
+                    }
+                    .frame(height: 4)
+
+                    HStack(spacing: 4) {
+                        Text(snapshot.topBatchPhase)
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        if snapshot.topBatchDaysInPhase > 0 {
+                            Text("Dag \(snapshot.topBatchDaysInPhase)")
+                                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                        Spacer()
+                        Text(snapshot.statusSummary)
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                            .lineLimit(1)
+                    }
+                }
+
+                if snapshot.topBatchNeedsBS {
+                    Text("🌾 B&S")
+                        .font(.system(size: 8, weight: .black))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.orange.opacity(0.2))
+                        .foregroundColor(.orange)
+                        .cornerRadius(6)
+                } else if snapshot.topBatchHasPins {
+                    Text("🌱 Pins")
+                        .font(.system(size: 8, weight: .bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(Color.green.opacity(0.2))
+                        .foregroundColor(.green)
+                        .cornerRadius(6)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color.white.opacity(0.04))
+            .cornerRadius(8)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Extra Large Home Screen Widget (iPad & Mac Desktop)
+
+struct ExtraLargeHomeScreenWidgetView: View {
+    let snapshot: MycoWidgetSnapshot
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Left: Large Widescreen Chamber Viewport
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    HStack(spacing: 5) {
+                        Text("🍄 MYCOLAB")
+                            .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.cyan)
+                        Text("•")
+                            .foregroundColor(.gray)
+                        Text(snapshot.roomName)
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Text("LIVE 60FPS")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(.green)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(Capsule())
+                }
+
+                ChamberOpticalView(snapshot: snapshot, isCompact: false)
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+
+            // Right: Actuator Control Station & Batch Deep Telemetry
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("KAMER BEDIENING")
+                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        .foregroundColor(.gray)
+                    Spacer()
+                    Text("HUB ACTIEF")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundColor(.green)
+                }
+
+                // Actuator Grid (2x2)
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        if #available(iOS 17.0, macOS 14.0, *) {
+                            Button(intent: ToggleHumidifierIntent()) {
+                                ActuatorButtonTile(
+                                    title: "Mist",
+                                    icon: "drop.fill",
+                                    isActive: snapshot.isHumidifierActive,
+                                    activeColor: .cyan
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            ActuatorButtonTile(
+                                title: "Mist",
+                                icon: "drop.fill",
+                                isActive: snapshot.isHumidifierActive,
+                                activeColor: .cyan
+                            )
+                        }
+
+                        if #available(iOS 17.0, macOS 14.0, *) {
+                            Button(intent: ToggleExhaustFanIntent()) {
+                                ActuatorButtonTile(
+                                    title: "Ventilatie",
+                                    icon: "wind",
+                                    isActive: snapshot.isExhaustFanActive,
+                                    activeColor: Color(red: 0.2, green: 0.6, blue: 1.0)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            ActuatorButtonTile(
+                                title: "Ventilatie",
+                                icon: "wind",
+                                isActive: snapshot.isExhaustFanActive,
+                                activeColor: Color(red: 0.2, green: 0.6, blue: 1.0)
+                            )
+                        }
+                    }
+
+                    HStack(spacing: 6) {
+                        if #available(iOS 17.0, macOS 14.0, *) {
+                            Button(intent: ToggleGrowLightIntent()) {
+                                ActuatorButtonTile(
+                                    title: "Kweeklamp",
+                                    icon: "lightbulb.fill",
+                                    isActive: snapshot.isLightActive,
+                                    activeColor: Color.yellow
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            ActuatorButtonTile(
+                                title: "Kweeklamp",
+                                icon: "lightbulb.fill",
+                                isActive: snapshot.isLightActive,
+                                activeColor: Color.yellow
+                            )
+                        }
+
+                        if #available(iOS 17.0, macOS 14.0, *) {
+                            Button(intent: TriggerFaePulseIntent()) {
+                                ActuatorButtonTile(
+                                    title: "Verse Lucht",
+                                    icon: "fanblades.fill",
+                                    isActive: false,
+                                    activeColor: Color.green,
+                                    subtitle: "60s"
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            ActuatorButtonTile(
+                                title: "Verse Lucht",
+                                icon: "fanblades.fill",
+                                isActive: false,
+                                activeColor: Color.green,
+                                subtitle: "60s"
+                            )
+                        }
+                    }
+                }
+
+                // 4-tile Telemetry Ribbon
+                HStack(spacing: 5) {
+                    ClimateMetricTile(icon: "thermometer.medium", label: "TEMP", value: String(format: "%.1f", snapshot.temperatureC), unit: "°", tint: .orange)
+                    ClimateMetricTile(icon: "drop.fill", label: "VOCHT", value: "\(Int(round(snapshot.humidityPct)))", unit: "%", tint: .cyan)
+                    ClimateMetricTile(icon: "gauge.with.dots.needle.bottom.50percent", label: "VPD", value: String(format: "%.2f", snapshot.vpdKpa), unit: "", tint: .green)
+                    ClimateMetricTile(icon: "wind", label: "CO2", value: "\(snapshot.co2Ppm)", unit: "", tint: .gray)
+                }
+
+                // Cultivation & Telemetry Detail Card
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(snapshot.topBatchName)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Text(snapshot.topBatchStrain)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.cyan)
+                    }
+
+                    HStack {
+                        Text(snapshot.topBatchPhase)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.gray)
+                        if snapshot.topBatchDaysInPhase > 0 {
+                            Text("• Dag \(snapshot.topBatchDaysInPhase)")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        Text("\(Int(round(snapshot.topBatchColonization)))% Kolonisatie")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundColor(.green)
+                    }
+
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.08))
+                            Capsule()
+                                .fill(LinearGradient(colors: [.cyan, .green], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: max(4, geo.size.width * CGFloat(snapshot.topBatchColonization / 100.0)))
+                        }
+                    }
+                    .frame(height: 5)
+                }
+                .padding(10)
+                .background(Color.white.opacity(0.04))
+                .cornerRadius(10)
+            }
+            .frame(width: 270)
+        }
+        .padding(12)
+    }
+}
+
 // MARK: - Entry Views & Configurations
 
 struct MycoLabClimateWidgetEntryView: View {
@@ -673,10 +1779,20 @@ struct MycoLabClimateWidgetEntryView: View {
                 CircularLockScreenWidgetView(snapshot: entry.snapshot)
             case .accessoryRectangular:
                 RectangularLockScreenWidgetView(snapshot: entry.snapshot)
+            case .accessoryCorner:
+                CircularLockScreenWidgetView(snapshot: entry.snapshot)
+            case .systemSmall:
+                SmallHomeScreenWidgetView(snapshot: entry.snapshot)
             case .systemMedium:
                 MediumHomeScreenWidgetView(snapshot: entry.snapshot)
+            case .systemLarge:
+                LargeHomeScreenWidgetView(snapshot: entry.snapshot)
+            case .systemExtraLarge:
+                ExtraLargeHomeScreenWidgetView(snapshot: entry.snapshot)
+            case .systemExtraLargePortrait:
+                ExtraLargeHomeScreenWidgetView(snapshot: entry.snapshot)
             default:
-                SmallHomeScreenWidgetView(snapshot: entry.snapshot)
+                LargeHomeScreenWidgetView(snapshot: entry.snapshot)
             }
         }
         .widgetURL(URL(string: "mycolab://dashboard"))
@@ -689,7 +1805,7 @@ public struct MycoLabClimateWidget: Widget {
     public init() {}
 
     public var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: MycoWidgetProvider()) { entry in
+        let config = StaticConfiguration(kind: kind, provider: MycoWidgetProvider()) { entry in
             if #available(iOS 17.0, *) {
                 MycoLabClimateWidgetEntryView(entry: entry)
                     .containerBackground(for: .widget) {
@@ -702,13 +1818,31 @@ public struct MycoLabClimateWidget: Widget {
             }
         }
         .configurationDisplayName("MycoLab Grow Monitor")
-        .description("Live climate metrics, colonization progress, and grow alerts on your home and lock screen.")
+        .description("Live climate metrics, colonization progress, grow chamber view, and handy room controls on your iPhone, iPad, and Mac home screens.")
         .supportedFamilies([
             .systemSmall,
             .systemMedium,
+            .systemLarge,
+            .systemExtraLarge,
             .accessoryInline,
             .accessoryCircular,
             .accessoryRectangular
         ])
+
+        #if os(iOS)
+        if #available(iOS 17.0, *) {
+            return config.contentMarginsDisabled()
+        } else {
+            return config
+        }
+        #elseif os(macOS)
+        if #available(macOS 14.0, *) {
+            return config.contentMarginsDisabled()
+        } else {
+            return config
+        }
+        #else
+        return config
+        #endif
     }
 }

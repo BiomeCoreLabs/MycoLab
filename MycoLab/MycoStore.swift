@@ -3807,6 +3807,58 @@ public import Combine
         save()
     }
 
+    // MARK: - Widget Pending Commands Execution
+    public func checkPendingWidgetCommands() {
+        let appGroupID = "group.com.mycolab.app"
+        let defaults = UserDefaults(suiteName: appGroupID) ?? .standard
+        guard let action = defaults.string(forKey: "mycolab_pending_actuator_action") else { return }
+        defaults.removeObject(forKey: "mycolab_pending_actuator_action")
+        
+        switch action {
+        case "toggle_humidifier":
+            if let dev = db.smartDevices.first(where: { 
+                $0.deviceType.lowercased().contains("humidifier") || 
+                $0.name.lowercased().contains("bevochtiger") || 
+                $0.name.lowercased().contains("mist") 
+            }) {
+                toggleSmartDevice(id: dev.id)
+            }
+        case "toggle_fan":
+            if let dev = db.smartDevices.first(where: { 
+                $0.deviceType.lowercased().contains("fan") || 
+                $0.deviceType.lowercased().contains("exhaust") || 
+                $0.name.lowercased().contains("afzuig") || 
+                $0.name.lowercased().contains("fae") 
+            }) {
+                toggleSmartDevice(id: dev.id)
+            }
+        case "toggle_light":
+            if let dev = db.smartDevices.first(where: { 
+                $0.deviceType.lowercased().contains("light") || 
+                $0.name.lowercased().contains("lamp") || 
+                $0.name.lowercased().contains("licht") 
+            }) {
+                toggleSmartDevice(id: dev.id)
+            }
+        case "trigger_fae_pulse":
+            if let dev = db.smartDevices.first(where: { 
+                $0.deviceType.lowercased().contains("fan") || 
+                $0.deviceType.lowercased().contains("exhaust") || 
+                $0.name.lowercased().contains("afzuig") || 
+                $0.name.lowercased().contains("fae") 
+            }) {
+                if !dev.isOn {
+                    toggleSmartDevice(id: dev.id)
+                }
+            }
+        default:
+            break
+        }
+        
+        // Refresh widget snapshot after executing pending command
+        MycoWidgetDataManager.shared.updateSnapshot(from: self.db)
+    }
+
     // MARK: - 24/7 AUTOPILOT CLIMATE ENGINE
     private var autopilotTimer: AnyCancellable? = nil
     private var lastForegroundActiveTime: Date = Date()
@@ -3837,6 +3889,7 @@ public import Combine
         // Poll sensor data and sync Tuya device status without sending switch ON commands
         pollAllConnectedSensors()
         syncSmartDevicesWithTuya(pushSchedules: false)
+        checkPendingWidgetCommands()
         
         // Note: Do NOT call syncAllSchedulesToTuyaCloud() on every app activation.
         // Re-creating/clearing cloud timers on launch triggers Tuya relay clicks/restarts.

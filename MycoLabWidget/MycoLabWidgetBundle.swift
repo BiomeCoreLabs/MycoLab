@@ -12,6 +12,8 @@ import SwiftUI
 struct MycoLabWidgetBundle: WidgetBundle {
     var body: some Widget {
         MycoLabClimateWidget()
+        #if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
         MycoLiveActivityWidget()
+        #endif
     }
 }

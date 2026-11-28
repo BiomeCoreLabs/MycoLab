@@ -6,7 +6,9 @@
 //
 
 import Foundation
+#if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
 import ActivityKit
+#endif
 import SwiftUI
 import Combine
 
@@ -18,7 +20,9 @@ public final class MycoLiveActivityManager: ObservableObject {
     @Published public private(set) var activeTimerTitle: String? = nil
     @Published public private(set) var activeTimerEndDate: Date? = nil
     
+    #if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
     private var currentActivity: Activity<MycoLiveActivityAttributes>?
+    #endif
     private var cancellables = Set<AnyCancellable>()
     
     private init() {
@@ -60,6 +64,7 @@ public final class MycoLiveActivityManager: ObservableObject {
         timerTitle: String? = nil,
         timerEndDate: Date? = nil
     ) {
+        #if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             return
         }
@@ -98,6 +103,9 @@ public final class MycoLiveActivityManager: ObservableObject {
                 print("⚠️ [MycoLiveActivityManager] Failed to start Live Activity: \(error.localizedDescription)")
             }
         }
+        #else
+        self.isActivityActive = true
+        #endif
     }
     
     // MARK: - Timer Specific Trigger
@@ -141,6 +149,7 @@ public final class MycoLiveActivityManager: ObservableObject {
     }
     
     public func endLiveActivity() {
+        #if canImport(ActivityKit) && !targetEnvironment(macCatalyst)
         Task {
             if let activity = currentActivity ?? Activity<MycoLiveActivityAttributes>.activities.first {
                 await activity.end(nil, dismissalPolicy: .immediate)
@@ -150,5 +159,10 @@ public final class MycoLiveActivityManager: ObservableObject {
             self.activeTimerTitle = nil
             self.activeTimerEndDate = nil
         }
+        #else
+        self.isActivityActive = false
+        self.activeTimerTitle = nil
+        self.activeTimerEndDate = nil
+        #endif
     }
 }
