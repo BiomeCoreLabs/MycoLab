@@ -182,7 +182,7 @@ fi
 
 echo "Python afhankelijkheden installeren..."
 sudo -u "$ACTUAL_USER" "$TARGET_DIR/venv/bin/pip" install --upgrade -q pip
-sudo -u "$ACTUAL_USER" "$TARGET_DIR/venv/bin/pip" install -q fastapi uvicorn tinytuya pydantic requests python-multipart
+sudo -u "$ACTUAL_USER" "$TARGET_DIR/venv/bin/pip" install -q fastapi uvicorn tinytuya pydantic requests python-multipart pillow
 echo -e "${GREEN}✅ Virtuele omgeving gereed.${NC}"
 
 echo -e "${BLUE}=== [5/6] Achtergronddienst (systemd) inrichten ===${NC}"
@@ -210,6 +210,32 @@ systemctl daemon-reload
 systemctl enable mycolab-hub.service
 systemctl restart mycolab-hub.service
 echo -e "${GREEN}✅ MycoLab Hub Service gestart op poort 8088.${NC}"
+# Camera Publisher Service inrichten
+cat << EOF > /etc/systemd/system/mycolab-camera.service
+[Unit]
+Description=MycoLab 24/7 Camera Publisher to LiveKit
+After=network-online.target livekit-server.service mycolab-hub.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${ACTUAL_USER}
+WorkingDirectory=${TARGET_DIR}
+ExecStart=${TARGET_DIR}/venv/bin/python3 camera_publisher.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable mycolab-camera.service
+systemctl restart mycolab-camera.service 2>/dev/null || true
+echo -e "${GREEN}✅ MycoLab Camera Publisher Service geconfigureerd.${NC}"
+
 
 # LiveKit WebRTC Streaming Server inrichten
 echo -e "${BLUE}=== LiveKit WebRTC Video Streaming Server inrichten ===${NC}"

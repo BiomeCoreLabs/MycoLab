@@ -64,6 +64,12 @@ if ! command -v livekit-server &> /dev/null; then
 fi
 
 echo -e "${GREEN}✅ livekit-server binary succesvol geïnstalleerd.${NC}"
+# LiveKit CLI publisher downloaden
+if ! command -v livekit-cli &> /dev/null; then
+    echo "LiveKit CLI downloaden voor camera video publishing..."
+    curl -sSL https://get.livekit.io/cli | bash || true
+fi
+
 
 # 3. LiveKit YAML configuratie aanmaken
 echo -e "${BLUE}=== [3/4] Configuratie /etc/livekit.yaml aanmaken ===${NC}"

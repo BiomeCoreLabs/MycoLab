@@ -1262,37 +1262,47 @@ struct ActuatorButtonTile: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 9)
-                .fill(isActive ? activeColor.opacity(0.22) : Color.white.opacity(0.06))
+            // Tactile background
+            RoundedRectangle(cornerRadius: 10)
+                .fill(isActive ? activeColor.opacity(0.20) : Color.white.opacity(0.06))
 
-            RoundedRectangle(cornerRadius: 9)
-                .stroke(isActive ? activeColor.opacity(0.8) : Color.white.opacity(0.12), lineWidth: 1)
+            // Glowing border
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(
+                    isActive ? activeColor.opacity(0.85) : Color.white.opacity(0.12),
+                    lineWidth: isActive ? 1.5 : 1.0
+                )
 
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 ZStack {
                     Circle()
-                        .fill(isActive ? activeColor.opacity(0.3) : Color.white.opacity(0.05))
-                        .frame(width: 20, height: 20)
+                        .fill(isActive ? activeColor.opacity(0.32) : Color.white.opacity(0.06))
+                        .frame(width: 22, height: 22)
 
                     Image(systemName: icon)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(isActive ? activeColor : Color.gray)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(isActive ? activeColor : Color.white.opacity(0.45))
                 }
 
                 Text(title)
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(isActive ? .white : Color.gray)
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundColor(isActive ? .white : Color.white.opacity(0.65))
                     .lineLimit(1)
 
+                // Mini status pill
                 Text(subtitle ?? (isActive ? "AAN" : "UIT"))
-                    .font(.system(size: 7, weight: .heavy, design: .monospaced))
-                    .foregroundColor(isActive ? activeColor : Color.gray.opacity(0.7))
+                    .font(.system(size: 7.5, weight: .heavy, design: .monospaced))
+                    .foregroundColor(isActive ? activeColor : Color.white.opacity(0.35))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1.5)
+                    .background(isActive ? activeColor.opacity(0.18) : Color.white.opacity(0.04))
+                    .clipShape(Capsule())
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 3)
+            .padding(.vertical, 3)
+            .padding(.horizontal, 2)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 48)
+        .frame(height: 50)
     }
 }
 
@@ -1414,39 +1424,42 @@ struct LargeHomeScreenWidgetView: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            // 1. Top Header Row
-            HStack(alignment: .center) {
-                HStack(spacing: 5) {
-                    Text("🍄 MYCOLAB")
-                        .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                        .foregroundColor(.cyan)
-                    Text("•")
-                        .foregroundColor(.gray)
-                    Text(snapshot.roomName)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                }
+            // 1. Top Header Row (deep link to dashboard)
+            Link(destination: URL(string: "mycolab://dashboard")!) {
+                HStack(alignment: .center) {
+                    HStack(spacing: 6) {
+                        Text("🍄 MYCOLAB")
+                            .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                            .foregroundColor(.cyan)
+                        Text("•")
+                            .foregroundColor(.gray)
+                        Text(snapshot.roomName)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(snapshot.hubActive ? Color.green : Color.gray)
-                        .frame(width: 6, height: 6)
-                    Text(snapshot.hubActive ? "24/7 HUB LIVE" : "STANDBY")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundColor(snapshot.hubActive ? .green : .gray)
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(snapshot.hubActive ? Color.green : Color.gray)
+                            .frame(width: 6, height: 6)
+                        Text(snapshot.hubActive ? "24/7 HUB ONLINE" : "STANDBY")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundColor(snapshot.hubActive ? .green : .gray)
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
                 }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
 
-            // 2. Kweekkamer Optical Feed Viewport
+            // 2. Kweekkamer Optical Feed Viewport (Optimized height for breathing room)
             ChamberOpticalView(snapshot: snapshot, isCompact: false)
-                .frame(height: 136)
+                .frame(height: 116)
 
             // 3. Dedicated 4-Metric Climate Telemetry Grid (Zero wasted space!)
             HStack(spacing: 5) {
@@ -1783,8 +1796,10 @@ struct MycoLabClimateWidgetEntryView: View {
                 CircularLockScreenWidgetView(snapshot: entry.snapshot)
             case .systemSmall:
                 SmallHomeScreenWidgetView(snapshot: entry.snapshot)
+                    .widgetURL(URL(string: "mycolab://dashboard"))
             case .systemMedium:
                 MediumHomeScreenWidgetView(snapshot: entry.snapshot)
+                    .widgetURL(URL(string: "mycolab://dashboard"))
             case .systemLarge:
                 LargeHomeScreenWidgetView(snapshot: entry.snapshot)
             case .systemExtraLarge:
@@ -1795,7 +1810,6 @@ struct MycoLabClimateWidgetEntryView: View {
                 LargeHomeScreenWidgetView(snapshot: entry.snapshot)
             }
         }
-        .widgetURL(URL(string: "mycolab://dashboard"))
     }
 }
 

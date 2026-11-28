@@ -274,6 +274,22 @@
                 </ul>
             </div>
 
+            <div class="doc-card" style="border-color: rgba(0, 255, 170, 0.4); background: rgba(16, 24, 38, 0.85);">
+                <h3 style="color: #00FFAA;">🍓 4. Raspberry Pi Autonomous 24/7 Hub & Camera Server</h3>
+                <p>
+                    Turn any Raspberry Pi (Pi 3B, 4, 5, or Zero 2W) into a 24/7 climate automation bridge and low-latency HD video streamer:
+                </p>
+                <ul>
+                    <li><b>One-Line Terminal Installer:</b><br>
+                        <code style="display:block; background:#05070a; padding:10px; border-radius:8px; border:1px solid rgba(0,255,170,0.3); color:#00FFAA; margin:8px 0; font-family:monospace; font-size:12px; overflow-x:auto;">curl -sSL https://raw.githubusercontent.com/BiomeCoreLabs/MycoLab/main/PiServer/setup.sh | sudo bash</code>
+                    </li>
+                    <li><b>ZeroConf mDNS Discovery:</b> The hub automatically registers as <code>pi-lab.local:8088</code>. In the MycoLab app or onboarding wizard, simply tap <b>"🔍 Zoek in Wi-Fi"</b> to pair in 1 second without entering IP addresses.</li>
+                    <li><b>Instant QR Code Pairing:</b> The installer prints an ANSI QR code directly in your terminal. Open the app, tap <b>"📷 Scan QR"</b>, and you are immediately connected.</li>
+                    <li><b>24/7 LiveKit WebRTC Video:</b> Operates on port <code>7880</code> with background H.264 camera publishing (<code>mycolab-camera.service</code>) and HTTP snapshot endpoints (<code>/camera/snapshot</code>).</li>
+                    <li><b>Power-Failure Safe:</b> Hardened with read-only boot partitions and RAM-based logs (<code>tmpfs</code>) so you can unplug power safely anytime.</li>
+                    <li><b>Native macOS Application:</b> <a href="MycoLab-macOS.dmg" style="color:#00E5FF; font-weight:700; text-decoration:underline;">Download MycoLab-macOS.dmg</a> (Universal Apple Silicon & Intel build).</li>
+                </ul>
+            </div>
             <div class="doc-card">
                 <h3>3. Vapor Pressure Deficit (VPD) Calibration</h3>
                 <p>

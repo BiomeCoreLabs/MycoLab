@@ -314,6 +314,8 @@ final class MycoWidgetDataManager {
         )
 
         let defaults = UserDefaults(suiteName: Self.appGroupID) ?? UserDefaults.standard
+        defaults.set(db.environmentConfig.effectivePiHubIP, forKey: "mycolab_pi_hub_ip")
+        defaults.set(db.environmentConfig.effectivePiHubPort, forKey: "mycolab_pi_hub_port")
         if let encoded = try? JSONEncoder().encode(snapshot) {
             defaults.set(encoded, forKey: Self.snapshotKey)
         }

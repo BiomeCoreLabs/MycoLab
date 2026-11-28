@@ -2099,6 +2099,13 @@ struct AIOnboardingWizardView: View {
     // User manual level override
     @State private var userSelectedLevelIndex: Int = 0 // 0: Beginner, 1: Hobby, 2: Gevorderd, 3: Smart Lab
     
+    // Raspberry Pi Hub pairing in Onboarding
+    @State private var isScanningHubs: Bool = false
+    @State private var isConnectedToHub: Bool = false
+    @State private var hubScanMessage: String? = nil
+    @State private var showingHubQRScanner: Bool = false
+    @State private var manualQRInput: String = ""
+    
     private let levelTitles = [
         "Startend Mycoloog (Niveau 1)",
         "Hobby Kweker (Niveau 2)",
@@ -2193,6 +2200,21 @@ struct AIOnboardingWizardView: View {
             }
             .navigationTitle(currentStep == 0 ? store.t(nl: "Welkom bij MycoLabs", en: "Welcome to MycoLabs") : store.t(nl: "Kies je Inrichting", en: "Choose Setup"))
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingHubQRScanner) {
+                QRScannerModalView(
+                    manualCode: $manualQRInput,
+                    onScanned: { code in
+                        showingHubQRScanner = false
+                        handleHubScannedCode(code)
+                    }
+                )
+            }
+            .onAppear {
+                let currentIp = store.db.environmentConfig.effectivePiHubIP
+                if !currentIp.isEmpty {
+                    isConnectedToHub = true
+                }
+            }
         }
     }
     
@@ -2596,6 +2618,92 @@ struct AIOnboardingWizardView: View {
                     }
                     .buttonStyle(.plain)
                 }
+                
+                // MARK: - Raspberry Pi Lab Hub Section
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Text(store.t(nl: "🍓 Raspberry Pi Lab Hub Koppeling", en: "🍓 Raspberry Pi Lab Hub Pairing"))
+                            .font(.headline.bold())
+                            .foregroundColor(.white)
+                        Spacer()
+                        if isConnectedToHub {
+                            HStack(spacing: 4) {
+                                Circle().fill(Color.green).frame(width: 6, height: 6)
+                                Text(store.t(nl: "Gekoppeld", en: "Connected"))
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.green)
+                            }
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(Color.green.opacity(0.15))
+                            .clipShape(Capsule())
+                        }
+                    }
+                    
+                    Text(store.t(
+                        nl: "Heb je al een MycoLab Raspberry Pi Hub in je kweekruimte? Koppel hem direct via Wi-Fi auto-discovery of de QR-code.",
+                        en: "Have a MycoLab Raspberry Pi Hub in your grow room? Pair it right away using Wi-Fi auto-discovery or QR code."
+                    ))
+                    .font(.caption)
+                    .foregroundColor(MycoTheme.textSecondary)
+
+                    HStack(spacing: 10) {
+                        Button {
+                            scanForHubsInWizard()
+                        } label: {
+                            HStack(spacing: 6) {
+                                if isScanningHubs {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .scaleEffect(0.8)
+                                    Text(store.t(nl: "Scannen...", en: "Scanning..."))
+                                } else {
+                                    Image(systemName: "antenna.radiowaves.left.and.right")
+                                    Text(store.t(nl: "Zoek in Wi-Fi", en: "Search in Wi-Fi"))
+                                }
+                            }
+                            .font(.caption.bold())
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.cyan.opacity(0.2))
+                            .cornerRadius(10)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.cyan.opacity(0.5), lineWidth: 1))
+                        }
+                        .disabled(isScanningHubs)
+
+                        Button {
+                            showingHubQRScanner = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "qrcode.viewfinder")
+                                Text(store.t(nl: "Scan QR", en: "Scan QR"))
+                            }
+                            .font(.caption.bold())
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.purple.opacity(0.2))
+                            .cornerRadius(10)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.purple.opacity(0.5), lineWidth: 1))
+                        }
+                    }
+
+                    if let msg = hubScanMessage {
+                        HStack(spacing: 6) {
+                            Image(systemName: isConnectedToHub ? "checkmark.circle.fill" : "info.circle")
+                                .foregroundColor(isConnectedToHub ? Color.green : Color.orange)
+                            Text(msg)
+                                .font(.caption)
+                                .foregroundColor(isConnectedToHub ? Color.green : Color.orange)
+                        }
+                        .padding(.top, 2)
+                    }
+                }
+                .padding(14)
+                .background(Color.white.opacity(0.04))
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 1))
             }
         }
     }
@@ -3053,6 +3161,81 @@ struct AIOnboardingWizardView: View {
         }
     }
     
+    private func scanForHubsInWizard() {
+        isScanningHubs = true
+        hubScanMessage = nil
+        Task {
+            var candidateHosts = ["pi-lab.local", "mycolab-hub.local"]
+            #if DEBUG
+            candidateHosts.append("192.168.50.115")
+            #endif
+            
+            var foundHost: String? = nil
+            for host in candidateHosts {
+                guard let url = URL(string: "http://\(host):8088/status") else { continue }
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 1.2
+                if let (_, resp) = try? await URLSession.shared.data(for: req),
+                   let http = resp as? HTTPURLResponse, http.statusCode == 200 {
+                    foundHost = host
+                    break
+                }
+            }
+            
+            await MainActor.run {
+                self.isScanningHubs = false
+                if let host = foundHost {
+                    self.store.db.environmentConfig.piHubIP = host
+                    self.store.db.environmentConfig.piHubPort = 8088
+                    self.store.saveImmediately()
+                    self.isConnectedToHub = true
+                    self.hubScanMessage = self.store.t(
+                        nl: "🍓 Hub '\(host)' succesvol gekoppeld!",
+                        en: "🍓 Hub '\(host)' paired successfully!"
+                    )
+                    MycoSyncManager.shared.triggerToast(message: "🍓 Hub '\(host)' gekoppeld")
+                } else {
+                    self.isConnectedToHub = false
+                    self.hubScanMessage = self.store.t(
+                        nl: "Geen Hub gevonden. Zorg dat de Pi aan staat op hetzelfde Wi-Fi netwerk.",
+                        en: "No Hub found. Ensure the Pi is on the same Wi-Fi network."
+                    )
+                }
+            }
+        }
+    }
+    
+    private func handleHubScannedCode(_ code: String) {
+        let clean = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.lowercased().hasPrefix("mycolab://hub") || clean.lowercased().hasPrefix("mycolab://pair-hub") || (clean.contains(":8088") && clean.contains("http")) {
+            if let url = URL(string: clean) {
+                if let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
+                   let items = components.queryItems {
+                    if let host = items.first(where: { $0.name == "host" || $0.name == "ip" })?.value, !host.isEmpty {
+                        store.db.environmentConfig.piHubIP = host
+                        if let portStr = items.first(where: { $0.name == "port" })?.value, let p = Int(portStr) {
+                            store.db.environmentConfig.piHubPort = p
+                        }
+                        store.saveImmediately()
+                        self.isConnectedToHub = true
+                        self.hubScanMessage = store.t(nl: "🍓 Hub '\(host)' gekoppeld via QR!", en: "🍓 Hub '\(host)' paired via QR!")
+                        MycoSyncManager.shared.triggerToast(message: "🍓 Hub '\(host)' gekoppeld")
+                        return
+                    }
+                } else if let host = url.host {
+                    store.db.environmentConfig.piHubIP = host
+                    if let port = url.port { store.db.environmentConfig.piHubPort = port }
+                    store.saveImmediately()
+                    self.isConnectedToHub = true
+                    self.hubScanMessage = store.t(nl: "🍓 Hub '\(host)' gekoppeld via QR!", en: "🍓 Hub '\(host)' paired via QR!")
+                    MycoSyncManager.shared.triggerToast(message: "🍓 Hub '\(host)' gekoppeld")
+                    return
+                }
+            }
+        }
+        self.hubScanMessage = store.t(nl: "Ongeldige QR-code voor Pi Hub.", en: "Invalid QR code for Pi Hub.")
+    }
+
     // MARK: - Dedicated Camera Finish
     private func finishAsDedicatedCamera() {
         UserDefaults.standard.set(true, forKey: "mycolab_is_dedicated_camera_device")

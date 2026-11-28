@@ -1032,3 +1032,42 @@ def delete_timelapse(filename: str):
         print(f"🗑️ [Pi Hub] Timelapse verwijderd: {safe_filename}")
         return {"success": True, "message": f"{safe_filename} verwijderd"}
     raise HTTPException(status_code=404, detail="Bestand niet gevonden")
+
+# MARK: - Live Camera Endpoints
+
+@app.get("/camera/snapshot")
+def get_camera_snapshot():
+    """Returns the latest captured camera snapshot JPEG from the Pi camera or synthetic frame."""
+    snapshot_path = "/tmp/latest_camera_snapshot.jpg"
+    if os.path.exists(snapshot_path):
+        return FileResponse(path=snapshot_path, media_type="image/jpeg", filename="snapshot.jpg")
+    
+    # Try generating synthetic frame if not yet present
+    try:
+        from camera_publisher import generate_synthetic_snapshot
+        generate_synthetic_snapshot()
+        if os.path.exists(snapshot_path):
+            return FileResponse(path=snapshot_path, media_type="image/jpeg", filename="snapshot.jpg")
+    except Exception:
+        pass
+    
+    raise HTTPException(status_code=503, detail="Camerabeeld nog niet beschikbaar")
+
+
+@app.get("/camera/status")
+def get_camera_status():
+    """Returns camera availability and live streaming metrics."""
+    has_cam = os.path.exists("/dev/video0")
+    snapshot_exists = os.path.exists("/tmp/latest_camera_snapshot.jpg")
+    snapshot_age = 0
+    if snapshot_exists:
+        snapshot_age = round(time.time() - os.path.getmtime("/tmp/latest_camera_snapshot.jpg"), 1)
+        
+    return {
+        "success": True,
+        "physical_camera_detected": has_cam,
+        "snapshot_available": snapshot_exists,
+        "snapshot_age_seconds": snapshot_age,
+        "livekit_stream_room": "mycolab-grow-room",
+        "livekit_server_port": 7880
+    }
